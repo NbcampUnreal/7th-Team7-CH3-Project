@@ -15,6 +15,7 @@ public:
     UPROPERTY(EditAnywhere, Category = "UI | Classes")
     TSubclassOf<class UUserWidget> MainHUDClass; // WBP_HUD 지정
 
+
 protected:
     virtual void BeginPlay() override;
 

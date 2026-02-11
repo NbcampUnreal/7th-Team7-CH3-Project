@@ -17,7 +17,9 @@ public class Team7_CH3_Project : ModuleRules
             "AIModule",
             "Niagara",
             "EnhancedInput",
-            "UMG"
+            "UMG",
+            "Slate",
+            "SlateCore"
         });
     }
 }

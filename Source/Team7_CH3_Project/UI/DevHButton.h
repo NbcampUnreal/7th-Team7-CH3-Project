@@ -9,7 +9,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnButtonClicked);
 
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHButton : public UUserWidget
+class TEAM7_CH3_PROJECT_API UDevHButton : public UUserWidget
 {
 	GENERATED_BODY()
 

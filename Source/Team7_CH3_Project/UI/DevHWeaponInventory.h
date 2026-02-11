@@ -9,7 +9,7 @@
 
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHWeaponInventory : public UUserWidget
+class TEAM7_CH3_PROJECT_API UDevHWeaponInventory : public UUserWidget
 {
 	GENERATED_BODY()
 	

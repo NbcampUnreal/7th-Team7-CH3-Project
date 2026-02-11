@@ -5,7 +5,7 @@
 #include "DevHHUD.generated.h"
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API ADevHHUD : public AHUD
+class TEAM7_CH3_PROJECT_API ADevHHUD : public AHUD
 {
 	GENERATED_BODY()
 	

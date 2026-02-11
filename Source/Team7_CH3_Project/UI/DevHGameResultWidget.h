@@ -6,7 +6,7 @@
 #include "DevHGameResultWidget.generated.h"
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHGameResultWidget : public UUserWidget
+class TEAM7_CH3_PROJECT_API UDevHGameResultWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	

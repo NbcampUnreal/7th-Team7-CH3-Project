@@ -6,7 +6,7 @@
 #include "DevHMainMenuWidget.generated.h"
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHMainMenuWidget : public UUserWidget
+class TEAM7_CH3_PROJECT_API UDevHMainMenuWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	

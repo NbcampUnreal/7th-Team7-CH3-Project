@@ -6,7 +6,7 @@
 #include "DevHStageWave.generated.h"
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHStageWave : public UUserWidget
+class TEAM7_CH3_PROJECT_API UDevHStageWave : public UUserWidget
 {
 	GENERATED_BODY()
 	

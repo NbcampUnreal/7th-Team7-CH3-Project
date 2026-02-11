@@ -8,7 +8,7 @@
 #include "DevHHealthBarWidget.generated.h"
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHHealthBarWidget : public UUserWidget
+class TEAM7_CH3_PROJECT_API UDevHHealthBarWidget : public UUserWidget
 {
 	GENERATED_BODY()
 

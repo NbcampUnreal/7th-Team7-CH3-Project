@@ -25,7 +25,7 @@ public:
 };
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHWeaponSlot : public UUserWidget
+class TEAM7_CH3_PROJECT_API UDevHWeaponSlot : public UUserWidget
 {
 	GENERATED_BODY()
 	

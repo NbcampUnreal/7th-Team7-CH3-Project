@@ -28,7 +28,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHPChanged,
 
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API UDevHUISubSystem : public UGameInstanceSubsystem
+class TEAM7_CH3_PROJECT_API UDevHUISubSystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	

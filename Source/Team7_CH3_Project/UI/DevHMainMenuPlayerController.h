@@ -5,7 +5,7 @@
 #include "DevHMainMenuPlayerController.generated.h"
 
 UCLASS()
-class TEAMPROJECTSAMPLE_API ADevHMainMenuPlayerController : public APlayerController
+class TEAM7_CH3_PROJECT_API ADevHMainMenuPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	

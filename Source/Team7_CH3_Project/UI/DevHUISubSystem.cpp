@@ -25,9 +25,10 @@ void UDevHUISubSystem::BroadcastHPUpdate(float CurrentHP, float MaxHP)
     OnHPChanged.Broadcast(CurrentHP, MaxHP);
 }
 
-void UDevHUISubSystem::BroadcastAmmoUpdate(int32 CurrentAmmo, int32 MaxAmmo)
+void UDevHUISubSystem::BroadcastWeaponStatus(FString WeaponName, int32 CurrentAmmo, int32 MaxAmmo)
 {
-    OnAmmoChanged.Broadcast(CurrentAmmo, MaxAmmo);
+
+    OnWeaponStatusChanged.Broadcast(WeaponName, CurrentAmmo, MaxAmmo);
 }
 
 void UDevHUISubSystem::AddScore(int32 Amount)

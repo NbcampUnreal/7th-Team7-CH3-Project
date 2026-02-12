@@ -20,6 +20,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnHUDDataChanged,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWeaponSelectionChanged,
     int32, SelectedIndex
 );
+// 델리게이트 선언: 탄약 변화를 알리는 신호
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged,
+    int32, CurrentAmmo,
+    int32, MaxAmmo
+);
 // 델리게이트 선언: 체력 변화를 알리는 신호
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHPChanged,
     float, CurrentHP,
@@ -42,6 +47,8 @@ public:
     FOnWeaponSelectionChanged OnWeaponSelectionChanged;
     UPROPERTY(BlueprintAssignable, Category = "UI | Events")
     FOnHPChanged OnHPChanged;
+    UPROPERTY(BlueprintAssignable, Category = "UI | Events")
+    FOnAmmoChanged OnAmmoChanged;
 
     // 신호 발신 함수 (로직에서 호출)
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
@@ -52,4 +59,16 @@ public:
     void TriggerWeaponSelection(int32 SelectedIndex); // 무기 바뀌었을 때
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
     void BroadcastHPUpdate(float CurrentHP, float MaxHP); // 체력 변했을 때 호출
+    UFUNCTION(BlueprintCallable, Category = "UI | Function")
+    void BroadcastAmmoUpdate(int32 CurrentAmmo, int32 MaxAmmo); // 총알 수 변했을 때 호출
+  
+
+public:
+    UPROPERTY(BlueprintReadOnly, Category = "UI | Data")
+    int32 CurrentScore = 0; // 점수 저장할 변수
+
+    UFUNCTION(BlueprintCallable, Category = "UI | Function")
+    void AddScore(int32 Amount); // 점수 변했을 때 호출
+    UFUNCTION(BlueprintPure, Category = "UI | Function")
+    int32 GetCurrentScore() const { return CurrentScore; } // 현재 점수 반환 함수
 };

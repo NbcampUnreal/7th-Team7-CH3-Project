@@ -14,6 +14,7 @@ void ABaseEnemy::BeginPlay()
 {
     Super::BeginPlay();
     LoadData();
+    StartChase();
 }
 
 void ABaseEnemy::LoadData()

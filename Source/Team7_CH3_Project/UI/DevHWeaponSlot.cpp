@@ -1,5 +1,5 @@
 ﻿#include "DevHWeaponSlot.h"
-// #include "FWeaponState.h" // 무기 데이터 테이블 구조체 헤더
+#include "Team7_CH3_Project/Weapon/WeaponData.h" // 무기 데이터
 
 void UDevHWeaponSlot::NativeConstruct()
 {
@@ -10,23 +10,24 @@ void UDevHWeaponSlot::InitSlotData()
 {
     if (!WeaponHandle.IsNull())
     {
-        // DT 행 데이터 가져오기
-        /*
-        FWeaponState* Data = WeaponHandle.GetRow< FWeaponState>(TEXT("Slot Init"));
+        FWeaponStat* Data = WeaponHandle.GetRow<FWeaponStat>(TEXT("Slot Init"));
+
         if (Data)
         {
-            // 변수에 미리 캐싱(저장)
             CachedUnlockScore = Data->UnlockScore;
             DefaultFrameColor = Data->FrameColor;
 
-            // 아이콘 설정
-            if (Image_WeaponIcon) Image_WeaponIcon->SetBrushFromTexture(Data->WeaponIcon);
-            // 기본 프레임 색상 저장, 설정
-            if (Image_Frame) Image_Frame->SetColorAndOpacity(DefaultFrameColor);
+            if (Image_WeaponIcon && Data->WeaponIcon)
+            {
+                Image_WeaponIcon->SetBrushFromTexture(Data->WeaponIcon);
+            }
 
-            UnlockStatus(0); // 초기 잠금 상태 시각화
+            if (Image_Frame)
+            {
+                Image_Frame->SetBrushTintColor(FSlateColor(DefaultFrameColor));
+            }
+            UnlockStatus(0);
         }
-        */ 
     }
 }
 
@@ -43,10 +44,19 @@ void UDevHWeaponSlot::UnlockStatus(int32 CurrentScore)
 
 void UDevHWeaponSlot::SetSlotActive(bool bIsActive)
 {
+    int32 CurrentScore = 0;
+    if (CurrentScore < CachedUnlockScore)
+    {
+        return; // 해금X 무기
+    }
+
     if (Image_Frame)
     {
         // 선택되면 강조색, 해제되면 다시 원본 색상
         FLinearColor TargetColor = bIsActive ? SelectedFrameColor : DefaultFrameColor;
-        Image_Frame->SetColorAndOpacity(TargetColor);
+        Image_Frame->SetBrushTintColor(FSlateColor(TargetColor));
     }
+    // 선택된 슬롯 연출
+    float Scale = bIsActive ? 1.15f : 1.0f;
+    SetRenderScale(FVector2D(Scale, Scale));
 }

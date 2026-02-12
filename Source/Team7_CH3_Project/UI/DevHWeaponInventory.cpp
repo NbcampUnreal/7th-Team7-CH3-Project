@@ -22,6 +22,8 @@ void UDevHWeaponInventory::NativeConstruct()
         // 2. 무기 선택 정보 
         UISub->OnWeaponSelectionChanged.AddDynamic(this, &UDevHWeaponInventory::SelectWeaponSlot);
     }
+
+    SelectWeaponSlot(0); // 0번 슬롯 기본 선택 상태
 }
 
 void UDevHWeaponInventory::UpdateWeaponSlot(int32 Index, int32 CurrentScore)

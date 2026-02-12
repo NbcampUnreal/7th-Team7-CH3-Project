@@ -63,6 +63,4 @@ protected:
 	void StopSprint();
 	void Dash();
 	void ResetDash();
-
-
 };

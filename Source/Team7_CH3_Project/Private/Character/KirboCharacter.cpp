@@ -8,6 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Team7_CH3_Project/UI/DevHUISubSystem.h" // UI 연결
 
 AKirboCharacter::AKirboCharacter()
 {
@@ -62,6 +63,24 @@ void AKirboCharacter::BeginPlay()
 		}
 	}
 
+    // UI
+    if (CharacterStatTable)
+    {
+        static const FString ContextString(TEXT("Stat Init"));
+        FKirboStatRow* StatData = CharacterStatTable->FindRow<FKirboStatRow>(FName("Player"), ContextString);
+
+        if (StatData)
+        {
+            StatComp->InitializeStats(*StatData);
+            GetCharacterMovement()->MaxWalkSpeed = StatComp->GetMoveSpeed();
+            DashCooldownTime = StatComp->GetDodgeCooldown();
+
+            if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+            {
+                UISub->BroadcastHPUpdate(StatComp->CurrentHP, StatComp->BaseStat.MaxHP);
+            }
+        }
+    }
 }
 
 void AKirboCharacter::EnablePlayerInput()

@@ -11,6 +11,7 @@ void UDevHWeaponSlot::InitSlotData()
     if (!WeaponHandle.IsNull())
     {
         // DT 행 데이터 가져오기
+        /*
         FWeaponState* Data = WeaponHandle.GetRow< FWeaponState>(TEXT("Slot Init"));
         if (Data)
         {
@@ -24,7 +25,8 @@ void UDevHWeaponSlot::InitSlotData()
             if (Image_Frame) Image_Frame->SetColorAndOpacity(DefaultFrameColor);
 
             UnlockStatus(0); // 초기 잠금 상태 시각화
-        } 
+        }
+        */ 
     }
 }
 

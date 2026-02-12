@@ -7,22 +7,6 @@
 #include "Engine/DataTable.h"
 #include "DevHWeaponSlot.generated.h"
 
-// 팀원과 약속해야 할 구조체 규격
-USTRUCT(BlueprintType)
-struct FWeaponState : public FTableRowBase
-{
-    GENERATED_BODY()
-
-public:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    UTexture2D* WeaponIcon;      // 아이콘
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FLinearColor FrameColor;    // 기본 프레임 색상
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 UnlockScore;          // 해금 점수
-};
 
 UCLASS()
 class TEAM7_CH3_PROJECT_API UDevHWeaponSlot : public UUserWidget

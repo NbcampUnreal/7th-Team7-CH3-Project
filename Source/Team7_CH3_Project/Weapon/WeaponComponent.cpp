@@ -50,6 +50,15 @@ void UWeaponComponent::BeginPlay()
 	}
 
 	bIsNextShotLeft = true;
+
+    // KH 추가 : 시작 시 UI에 초기 무기 정보 방송
+    if (CurrentStat)
+    {
+        if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+        {
+            UISub->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
+        }
+    }
 	
 }
 
@@ -218,7 +227,8 @@ void UWeaponComponent::Fire()
     {
         if (UDevHUISubSystem* UISubSystem = GI->GetSubsystem<UDevHUISubSystem>())
         {
-            UISubSystem->BroadcastAmmoUpdate(CurrentAmmo, CurrentStat->MaxAmmo);
+            // 무기 타입, Ammo 개수 방송
+            UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
         }
     }
  
@@ -262,9 +272,9 @@ void UWeaponComponent::CompleteReload()
 	bIsReloading = false;
 
     // UI 서브 시스템
-    if (UDevHUISubSystem* UISubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+    if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
     {
-        UISubsystem->BroadcastAmmoUpdate(CurrentAmmo, CurrentStat->MaxAmmo);
+        UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
     }
 
 	float CurrentTime = GetWorld()->GetTimeSeconds();
@@ -344,12 +354,10 @@ void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
         // KH 추가 : 성공적으로 교체되었을 때만 UI 방송
         if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
         {
-            int32 WeaponIndex = 0;
-            if (NewWeaponName == "Pistol") WeaponIndex = 0;
-            else if (NewWeaponName == "Rifle") WeaponIndex = 1;
-            else if (NewWeaponName == "Shotgun") WeaponIndex = 2;
+            UISubSystem->TriggerWeaponSelection(NewStat->SlotIndex);
 
-            UISubSystem->TriggerWeaponSelection(WeaponIndex);
+            // KH 추가 : 무기 이름과 탄약 정보 방송
+            UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
         }
 	}
 }

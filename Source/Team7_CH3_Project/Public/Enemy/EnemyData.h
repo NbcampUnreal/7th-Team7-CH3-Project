@@ -13,7 +13,20 @@ struct FEnemyData : public FTableRowBase
     GENERATED_BODY()
 
 public:
-
+    // 기본 생성자: 여기서 모든 멤버 변수를 초기화합니다.
+    FEnemyData()
+        : MonsterName(TEXT("Default Name")) // 문자열 초기화
+        , AttackType(EAttackType::Melee)     // 열거형 초기화 (정의된 기본값 사용)
+        , HealthMax(100.0f)                  // 모든 float 변수는 0.0f 혹은 기본값으로
+        , Damage(10.0f)
+        , Defense(0.0f)
+        , AttackRange(150.0f)
+        , AttackCooldown(2.0f)
+        , Movespeed(300.0f)
+        , GoldDrop(0)                        // int32 초기화
+        , ItemDropChance(0.05f)              // 5% 확률 등 기본값 설정
+    {
+    }
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FString MonsterName;
 

@@ -8,6 +8,18 @@ public class Team7_CH3_Project : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "NavigationSystem", "AIModule", "Niagara", "EnhancedInput" });
+        PublicDependencyModuleNames.AddRange(new string[] {
+            "Core",
+            "CoreUObject",
+            "Engine",
+            "InputCore",
+            "NavigationSystem",
+            "AIModule",
+            "Niagara",
+            "EnhancedInput",
+            "UMG",
+            "Slate",
+            "SlateCore"
+        });
     }
 }

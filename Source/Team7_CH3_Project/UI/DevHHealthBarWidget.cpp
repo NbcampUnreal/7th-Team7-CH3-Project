@@ -2,6 +2,8 @@
 #include "Components/ProgressBar.h"
 #include "DevHUISubSystem.h"
 #include "Components/TextBlock.h"
+#include "Team7_CH3_Project/Public/Character/KirboStatComponent.h"
+
 
 void UDevHHealthBarWidget::NativeConstruct()
 {
@@ -22,28 +24,19 @@ void UDevHHealthBarWidget::NativeConstruct()
             UISub->OnHPChanged.AddDynamic(this, &UDevHHealthBarWidget::UpdateHealthBar);
         }
     }
-}
 
-void UDevHHealthBarWidget::InitializeHealth(FName CharacterRowName)
-{
-    if (StatTable)
+    // 안전 장치 : 생성 직후 현재 플레이어의 데이터를 직접 가져와 초기화
+    if (APlayerController* PC = GetOwningPlayer())
     {
-        /* [데이터 연결 시점 가이드]
-           1. 상단에 #include "다른사람이준파일.h" 추가
-           2. 아래 주석 해제 
-        */
-
-        /*
-        FCharacterData* Row = StatTable->FindRow<FCharacterData>(CharacterRowName, TEXT(""));
-        if (Row)
+        if (APawn* Pawn = PC->GetPawn())
         {
-            // 구조체의 변수명이 MaxHP인지 확인 필수!
-            CachedMaxHP = Row->MaxHP; 
-            
-            // 초기화 시점에 현재 체력(풀피)으로 업데이트
-            UpdateHealthBar(CachedMaxHP, CachedMaxHP); 
+            // 캐릭터에서 스탯 컴포넌트를 찾아 직접 값을 가져옵니다.
+            // (컴포넌트 헤더 포함 필요)
+            if (UKirboStatComponent* Stat = Pawn->FindComponentByClass<UKirboStatComponent>())
+            {
+                UpdateHealthBar(Stat->CurrentHP, Stat->BaseStat.MaxHP);
+            }
         }
-        */
     }
 }
 

@@ -19,7 +19,7 @@ protected:
     
     // 이동할 레벨 이름 에디터에서 생성
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Config")
-    FName LevelToLoad = FName("TopDownMap"); /*레벨 교체 시 수정*/
+    FName LevelToLoad = FName("L_TopDownTest"); /*레벨 교체 시 수정*/
 
 protected:
     virtual void NativeConstruct() override; // 초기화

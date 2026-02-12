@@ -37,6 +37,8 @@ public:
     int32 PelletCount = 1; // 한 번에 발사되는 탄환 수
 
     /* --- UI 관련 에셋 --- */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    int32 SlotIndex = 0; // 몇 번째 슬롯에 대응하는지 지정
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     UTexture2D* WeaponIcon = nullptr; // UI에 표시될 무기 아이콘

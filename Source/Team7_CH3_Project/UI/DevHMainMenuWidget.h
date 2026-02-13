@@ -12,9 +12,9 @@ class TEAM7_CH3_PROJECT_API UDevHMainMenuWidget : public UUserWidget
 	
 protected:
     // WBP_MainMenu에 배치한 버튼 위젯
-    UPROPERTY(meta = (BlindWidget))
+    UPROPERTY(meta = (BindWidget))
     UDevHButton* StartButton;
-    UPROPERTY(meta = (BlindWidget))
+    UPROPERTY(meta = (BindWidget))
     UDevHButton* ExitButton;
     
     // 이동할 레벨 이름 에디터에서 생성

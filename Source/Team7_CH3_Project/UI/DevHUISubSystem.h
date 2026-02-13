@@ -31,6 +31,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHPChanged,
     float, CurrentHP,
     float, MaxHP
 );
+// 델리게이트 선언: 쿨타임 시간을 알리는 신호
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackCooldownTriggered,
+    float, CooldownTime
+);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillCooldownTriggered,
+    float, CooldownTime
+);
 
 
 UCLASS()
@@ -50,6 +57,10 @@ public:
     FOnHPChanged OnHPChanged;
     UPROPERTY(BlueprintAssignable, Category = "UI | Events")
     FOnWeaponStatusChanged OnWeaponStatusChanged;
+    UPROPERTY(BlueprintAssignable, Category = "UI|Events")
+    FOnAttackCooldownTriggered OnAttackCooldownTriggered;
+    UPROPERTY(BlueprintAssignable, Category = "UI|Events")
+    FOnSkillCooldownTriggered OnSkillCooldownTriggered;
 
     // 신호 발신 함수 (로직에서 호출)
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
@@ -62,7 +73,10 @@ public:
     void BroadcastHPUpdate(float CurrentHP, float MaxHP); // 체력 변했을 때 호출
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
     void BroadcastWeaponStatus(FString WeaponName, int32 CurrentAmmo, int32 MaxAmmo); // 총알 수 변했을 때 호출
-  
+    UFUNCTION(BlueprintCallable, Category = "UI | Function")
+    void BroadcastNormalAttack(float Cooldown); // 일반 공격 작동하면 호출
+    UFUNCTION(BlueprintCallable, Category = "UI | Function")
+    void BroadcastSkillAttack(float Cooldown); // 스킬 작동하면 호출
 
 public:
     UPROPERTY(BlueprintReadOnly, Category = "UI | Data")

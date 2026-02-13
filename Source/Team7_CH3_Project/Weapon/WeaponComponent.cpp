@@ -10,6 +10,7 @@
 #include "NiagaraComponent.h"
 #include "WeaponData.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
+#include "Team7_CH3_Project/Skill/SkillData.h" // KH 추가 : 스킬 데이터 테이블
 
 // Sets default values for this component's properties
 UWeaponComponent::UWeaponComponent()
@@ -30,6 +31,7 @@ void UWeaponComponent::BeginPlay()
 	// 쓰레기 값으로 인한 사격 차단 방지
 	LastFireTime = 0.0f;
 	LastWeaponSwitchTime = -WeaponSwitchDelay;
+    LastSkillUsedTime = -100.0f; // KH 추가 : 시작하자마자 스킬 사용 가능하도록 초기화
 
 	// 데이터 테이블 로드 및 초기 무기 세팅
 	if (WeaponStatTable)
@@ -51,7 +53,7 @@ void UWeaponComponent::BeginPlay()
 
 	bIsNextShotLeft = true;
 
-    // KH 추가 : 시작 시 UI에 초기 무기 정보 방송
+    // [UI 필수 코드! 지우지 말아주세요!] KH 추가 : 시작 시 UI에 초기 무기 정보 방송
     if (CurrentStat)
     {
         if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
@@ -122,6 +124,20 @@ void UWeaponComponent::Fire()
 
 	// 마우스 연타 방지 로직 : FireRate보다 빠르게 입력이 들어오면 무시
 	float CurrentTime = GetWorld()->GetTimeSeconds();
+
+    // KH 추가: UI 서브시스템에 공격 발동 알림
+    if (UGameInstance* GI = GetWorld()->GetGameInstance())
+    {
+        if (UDevHUISubSystem* UISubSystem = GI->GetSubsystem<UDevHUISubSystem>())
+        {
+            // 현재 무기의 연사 속도(FireRate)를 쿨타임으로 전달
+            UISubSystem->BroadcastNormalAttack(CurrentStat->FireRate);
+
+            // 기존 탄약 업데이트 방송
+            UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
+        }
+    }
+
 	// 무기를 바꾼 지 WeaponSwitchDelay만큼 지나지 않았다면 발사하지 않음
 	if (CurrentTime - LastWeaponSwitchTime < WeaponSwitchDelay) return;
 	// 타이머 오차를 고려해 FireRate의 80%만 지나도 발사를 허용 (연사 끊김 방지)
@@ -363,7 +379,8 @@ void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
 	}
 }
 
-int32 UWeaponComponent::GetCurrentScore() const
+
+int32 UWeaponComponent::GetCurrentScore() const // KH 추가 : 서브시스템에 저장된 점수 가져오는 보조 함수
 {
     if (UGameInstance* GI = GetWorld()->GetGameInstance())
     {
@@ -374,4 +391,39 @@ int32 UWeaponComponent::GetCurrentScore() const
         }
     }
     return 0;
+}
+
+void UWeaponComponent::TryUseSkill() // KH 추가 : 스킬 실행 함수 (UI 쿨타임 연동)
+{
+    if (!SkillStatTable) return;
+
+    // 데이터 테이블에서 스킬 정보 찾기
+    FSkillData* SkillData = SkillStatTable->FindRow<FSkillData>(CurrentSkillRowName, TEXT(""));
+
+    if (SkillData)
+    {
+        float CurrentTime = GetWorld()->GetTimeSeconds();
+
+        // 쿨타임 체크 (현재 시간 - 마지막 사용 시간 >= Cooldown)
+        if (CurrentTime - LastSkillUsedTime >= SkillData->Cooldown)
+        {
+            // --- [임시] 실제 스킬 로직을 여기에 구현 (나중에 상빈님이 채울 부분) ---
+            UE_LOG(LogTemp, Warning, TEXT("스킬 사용됨: %s"), *SkillData->SkillName);
+            // ----------------------------------------------------------------------
+
+            // 마지막 사용 시점 업데이트
+            LastSkillUsedTime = CurrentTime;
+
+            // UI 서브시스템에 스킬 쿨타임 방송 (UI 게이지 작동)
+            // [UI 필수 코드! 지우지 말아주세요!]
+            if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+            {
+                UISub->BroadcastSkillAttack(SkillData->Cooldown);
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("스킬 재사용 대기 중... 남은 시간: %.1f초"), SkillData->Cooldown - (CurrentTime - LastSkillUsedTime));
+        }
+    }
 }

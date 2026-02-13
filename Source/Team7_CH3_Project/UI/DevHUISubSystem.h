@@ -31,12 +31,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHPChanged,
     float, CurrentHP,
     float, MaxHP
 );
-// 델리게이트 선언: 쿨타임 시간을 알리는 신호
+// 델리게이트 선언: 공격 쿨타임 시간을 알리는 신호
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackCooldownTriggered,
     float, CooldownTime
 );
+// 델리게이트 선언: 스킬 쿨타임 시간을 알리는 신호
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillCooldownTriggered,
     float, CooldownTime
+);
+// 델리게이트 선언: 스테미나 변화를 알리는 신호
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStaminaChanged,
+    float, CurrentStamina,
+    float, MaxStamina
 );
 
 
@@ -61,6 +67,8 @@ public:
     FOnAttackCooldownTriggered OnAttackCooldownTriggered;
     UPROPERTY(BlueprintAssignable, Category = "UI|Events")
     FOnSkillCooldownTriggered OnSkillCooldownTriggered;
+    UPROPERTY(BlueprintAssignable, Category = "UI | Events")
+    FOnStaminaChanged OnStaminaChanged;
 
     // 신호 발신 함수 (로직에서 호출)
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
@@ -77,6 +85,8 @@ public:
     void BroadcastNormalAttack(float Cooldown); // 일반 공격 작동하면 호출
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
     void BroadcastSkillAttack(float Cooldown); // 스킬 작동하면 호출
+    UFUNCTION(BlueprintCallable, Category = "UI | Function")
+    void BroadcastStaminaUpdate(float CurrentStamina, float MaxStamina); // 스테미나 변하면 호출
 
 public:
     UPROPERTY(BlueprintReadOnly, Category = "UI | Data")

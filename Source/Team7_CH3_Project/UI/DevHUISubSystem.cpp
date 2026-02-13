@@ -39,6 +39,11 @@ void UDevHUISubSystem::BroadcastSkillAttack(float Cooldown)
     OnSkillCooldownTriggered.Broadcast(Cooldown);
 }
 
+void UDevHUISubSystem::BroadcastStaminaUpdate(float CurrentStamina, float MaxStamina)
+{
+    OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
+}
+
 void UDevHUISubSystem::AddScore(int32 Amount)
 {
     CurrentScore += Amount;

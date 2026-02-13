@@ -356,8 +356,9 @@ void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
         {
             UISubSystem->TriggerWeaponSelection(NewStat->SlotIndex);
 
-            // KH 추가 : 무기 이름과 탄약 정보 방송
+            // KH 추가 : 무기 이름과 탄약 정보 방송 & 초기 무기의 슬롯 인덱스 선택 신호 방송
             UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
+            UISubSystem->TriggerWeaponSelection(CurrentStat->SlotIndex);
         }
 	}
 }

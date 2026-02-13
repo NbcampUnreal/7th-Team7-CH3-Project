@@ -57,6 +57,6 @@ void UDevHWeaponSlot::SetSlotActive(bool bIsActive)
         Image_Frame->SetBrushTintColor(FSlateColor(TargetColor));
     }
     // 선택된 슬롯 연출
-    float Scale = bIsActive ? 1.15f : 1.0f;
-    SetRenderScale(FVector2D(Scale, Scale));
+    // float Scale = bIsActive ? 1.15f : 1.0f;
+    // SetRenderScale(FVector2D(Scale, Scale));
 }

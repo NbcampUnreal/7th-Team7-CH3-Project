@@ -20,8 +20,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnHUDDataChanged,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWeaponSelectionChanged,
     int32, SelectedIndex
 );
-// 델리게이트 선언: 탄약 변화를 알리는 신호
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged,
+// 델리게이트 선언: 무기 종류별 탄약 변화를 알리는 신호
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnWeaponStatusChanged,
+    FString, WeaponName,
     int32, CurrentAmmo,
     int32, MaxAmmo
 );
@@ -48,7 +49,7 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "UI | Events")
     FOnHPChanged OnHPChanged;
     UPROPERTY(BlueprintAssignable, Category = "UI | Events")
-    FOnAmmoChanged OnAmmoChanged;
+    FOnWeaponStatusChanged OnWeaponStatusChanged;
 
     // 신호 발신 함수 (로직에서 호출)
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
@@ -60,7 +61,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
     void BroadcastHPUpdate(float CurrentHP, float MaxHP); // 체력 변했을 때 호출
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
-    void BroadcastAmmoUpdate(int32 CurrentAmmo, int32 MaxAmmo); // 총알 수 변했을 때 호출
+    void BroadcastWeaponStatus(FString WeaponName, int32 CurrentAmmo, int32 MaxAmmo); // 총알 수 변했을 때 호출
   
 
 public:

@@ -33,6 +33,8 @@ void UKirboStatComponent::InitializeStats(const FKirboStatRow& InStatData)
         if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
         {
             UISub->BroadcastHPUpdate(CurrentHP, BaseStat.MaxHP);
+            // KH 추가 : 스테미너 초기값도 UI에 알려줘야 처음부터 게이지가 차 보임
+            UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
         }
     }
 }
@@ -78,6 +80,13 @@ bool UKirboStatComponent::UseStamina(float Amount)
 	{
 		CurrentStamina -= Amount;
 		OnStaminaChanged.Broadcast(CurrentStamina, BaseStat.MaxStamina);
+
+        // KH 추가 : UI 서브시스템 알림
+        if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+        {
+            UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
+        }
+
 		return true;
 	}
 	return false;
@@ -87,4 +96,10 @@ void UKirboStatComponent::RecoverStamina(float Amount)
 {
 	CurrentStamina = FMath::Clamp(CurrentStamina + Amount, 0.0f, BaseStat.MaxStamina);
 	OnStaminaChanged.Broadcast(CurrentStamina, BaseStat.MaxStamina);
+
+    // KH 추가 : 회복 시에도 UI 갱신
+    if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+    {
+        UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
+    }
 }

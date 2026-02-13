@@ -63,4 +63,14 @@ protected:
 	void StopSprint();
 	void Dash();
 	void ResetDash();
+
+    
+public: // KH 추가 (시작)
+    UPROPERTY()
+    UMaterialInstanceDynamic* StaminaMaterialDynamic; // 머티리얼을 제어할 변수 선언
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+    UStaticMeshComponent* StaminaPlaneComp; // 스태미나 바를 표시할 발밑의 판
+    
+    void UpdateStamina(float CurrentStamina, float MaxStamina); // 외부나 Tick에서 호출할 함수 선언
+    // KH 추가 (끝)
 };

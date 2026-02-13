@@ -7,6 +7,7 @@
 #include "Engine/DataTable.h"
 #include "Components/ActorComponent.h"
 #include "WeaponData.h"
+#include "Team7_CH3_Project/Skill/SkillData.h" // KH 추가
 #include "WeaponComponent.generated.h"
 
 
@@ -28,9 +29,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void StartReload(); // 장전 함수
 
+    /** [UI 필수 코드! 코드 수정해도 이름 유지해주세요!] KH 추가 : 스킬 실행 함수 (UI 쿨타임 연동) */
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    void TryUseSkill();
+
 	/** 실시간 무기 교체 (데이터 테이블의 행 이름을 입력) */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void ChangeWeapon(FName NewWeaponName);
+
 
 protected:
 	// Called when the game starts
@@ -50,6 +56,13 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Config")
 	FName RightMuzzleSocketName = TEXT("Muzzle_R");
 
+    // --- [UI 필수 코드! 지우지 말아주세요!] KH : 스킬 설정 추가 ---
+    UPROPERTY(EditAnywhere, Category = "Config | Skill")
+    TObjectPtr<UDataTable> SkillStatTable; // 스킬 데이터 테이블
+    UPROPERTY(EditAnywhere, Category = "Config | Skill")
+    FName CurrentSkillRowName = TEXT("DefaultSkill"); // 사용할 스킬 행 이름
+
+
 private:	
 
 	void Fire(); // 총 발사 로직
@@ -66,9 +79,13 @@ private:
 	float WeaponSwitchDelay = 0.5f; // 무기 교체 후 즉시 사격을 방지하기 위한 지연 시간
 	float LastWeaponSwitchTime; // 무기를 바꾼 시점을 기록
 	TMap<FName, int32> WeaponAmmoMap; // 무기 이름(FName)별로 남은 탄약(int32)을 저장하는 맵
-    int32 GetCurrentScore() const; // KH 추가 : 서브시스템에 저장된 점수 가져오는 보조 함수
 
 	// 장전 대기 시간을 관리할 타이머 핸들
 	FTimerHandle FireTimerHandle;
 	FTimerHandle ReloadTimerHandle;
+
+
+private :
+    int32 GetCurrentScore() const; // KH 추가 : 서브시스템에 저장된 점수 가져오는 보조 함수
+    float LastSkillUsedTime = 0.0f; // [UI 필수 코드! 지우지 말아주세요!] KH 추가 : 스킬 쿨타임 관리를 위한 마지막 사용 시간 기록 
 };

@@ -14,6 +14,7 @@ void UDevHUISubSystem::BroadcastHUDUpdate(int32 Stage, int32 Wave, int32 Kills, 
 
 void UDevHUISubSystem::TriggerWeaponSelection(int32 SelectedIndex)
 {
+    UE_LOG(LogTemp, Warning, TEXT("Subsystem: TriggerWeaponSelection Called with Index %d"), SelectedIndex);
     // 무기 교체 신호를 보냄
     OnWeaponSelectionChanged.Broadcast(SelectedIndex);
 }
@@ -22,4 +23,15 @@ void UDevHUISubSystem::BroadcastHPUpdate(float CurrentHP, float MaxHP)
 {
     // 체력 변동 신호를 보냄
     OnHPChanged.Broadcast(CurrentHP, MaxHP);
+}
+
+void UDevHUISubSystem::BroadcastAmmoUpdate(int32 CurrentAmmo, int32 MaxAmmo)
+{
+    OnAmmoChanged.Broadcast(CurrentAmmo, MaxAmmo);
+}
+
+void UDevHUISubSystem::AddScore(int32 Amount)
+{
+    CurrentScore += Amount;
+    BroadcastHUDUpdate(1, 1, 0, CurrentScore);
 }

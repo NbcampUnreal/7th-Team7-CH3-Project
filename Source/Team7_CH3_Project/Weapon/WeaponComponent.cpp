@@ -8,6 +8,8 @@
 #include "DrawDebugHelpers.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
+#include "WeaponData.h"
+#include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
 
 // Sets default values for this component's properties
 UWeaponComponent::UWeaponComponent()
@@ -93,17 +95,21 @@ void UWeaponComponent::StopFire()
 
 void UWeaponComponent::Fire()
 {
-	// 발사 전 예외 처리 (장전 중, 탄약 부족 등)
-	if (!CurrentStat || bIsReloading || CurrentAmmo <= 0)
-	{
-		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+    // 1. 점수 및 스탯 체크 (최우선 가드 로직)
+    if (!CurrentStat || GetCurrentScore() < CurrentStat->UnlockScore)
+    {
+        // 점수가 부족해지면 연사 타이머를 해제하고 사격을 멈춥니다.
+        GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+        return;
+    }
 
-		if (CurrentAmmo <= 0)
-		{
-			StartReload();
-		}
-		return;
-	}
+    // 2. 상태 체크 (장전 중이거나 탄약이 없는 경우)
+    if (bIsReloading || CurrentAmmo <= 0)
+    {
+        GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+        if (CurrentAmmo <= 0) StartReload();
+        return;
+    }
 
 	// 마우스 연타 방지 로직 : FireRate보다 빠르게 입력이 들어오면 무시
 	float CurrentTime = GetWorld()->GetTimeSeconds();
@@ -207,6 +213,15 @@ void UWeaponComponent::Fire()
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
 	bIsNextShotLeft = !bIsNextShotLeft;
 
+    // KH 추가 : UI 서브시스템
+    if (UGameInstance* GI = GetWorld()->GetGameInstance())
+    {
+        if (UDevHUISubSystem* UISubSystem = GI->GetSubsystem<UDevHUISubSystem>())
+        {
+            UISubSystem->BroadcastAmmoUpdate(CurrentAmmo, CurrentStat->MaxAmmo);
+        }
+    }
+ 
 	if (CurrentAmmo <= 0)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
@@ -246,6 +261,12 @@ void UWeaponComponent::CompleteReload()
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
 	bIsReloading = false;
 
+    // UI 서브 시스템
+    if (UDevHUISubSystem* UISubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+    {
+        UISubsystem->BroadcastAmmoUpdate(CurrentAmmo, CurrentStat->MaxAmmo);
+    }
+
 	float CurrentTime = GetWorld()->GetTimeSeconds();
 	LastFireTime = CurrentTime - CurrentStat->FireRate;
 
@@ -271,11 +292,18 @@ void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
 	// 현재 무기의 남은 탄약을 맵에 저장
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
 
-	// 새로운 행 이름으로 데이터 찾기
+	//  KH 추가 : 새로운 행 이름으로 데이터 찾기
 	FWeaponStat* NewStat = WeaponStatTable->FindRow<FWeaponStat>(NewWeaponName, TEXT(""));
 
-	if (NewStat)
-	{
+    if (NewStat)
+    {
+        //  KH 추가 : 헬퍼 함수를 사용하여 간결하게 체크
+        if (GetCurrentScore() < NewStat->UnlockScore)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("무기 잠김 상태: 해금 점수 부족!"));
+            return;
+        }
+
 		// 현재 스탯 교체 및 변수 초기화
 		WeaponRowName = NewWeaponName;
 		CurrentStat = NewStat;
@@ -312,6 +340,29 @@ void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
 		}
 
 		UE_LOG(LogTemp, Log, TEXT("Weapon Switched to: %s"), *NewWeaponName.ToString());
+
+        // KH 추가 : 성공적으로 교체되었을 때만 UI 방송
+        if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+        {
+            int32 WeaponIndex = 0;
+            if (NewWeaponName == "Pistol") WeaponIndex = 0;
+            else if (NewWeaponName == "Rifle") WeaponIndex = 1;
+            else if (NewWeaponName == "Shotgun") WeaponIndex = 2;
+
+            UISubSystem->TriggerWeaponSelection(WeaponIndex);
+        }
 	}
 }
 
+int32 UWeaponComponent::GetCurrentScore() const
+{
+    if (UGameInstance* GI = GetWorld()->GetGameInstance())
+    {
+        if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
+        {
+            //  KH 추가 : 서브시스템에 구현된 GetCurrentScore()를 호출
+            return UISub->GetCurrentScore();
+        }
+    }
+    return 0;
+}

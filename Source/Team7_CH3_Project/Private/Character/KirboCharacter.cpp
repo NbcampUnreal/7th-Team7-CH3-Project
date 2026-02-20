@@ -8,7 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Team7_CH3_Project/UI/DevHUISubSystem.h" // UI 연결
+#include "Team7_CH3_Project/UI/DevHUISubSystem.h"
 
 AKirboCharacter::AKirboCharacter()
 {
@@ -32,33 +32,26 @@ AKirboCharacter::AKirboCharacter()
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 
-    // KH 추가 : 스태미나 바 컴포넌트 생성
-    StaminaPlaneComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaminaPlane"));
-    StaminaPlaneComp->SetupAttachment(RootComponent);
-
-    // KH 추가 : 캐릭터 회전을 따라가지 않도록 설정!
-    StaminaPlaneComp->SetUsingAbsoluteRotation(true);
-
-    // KH 추가 : 바닥에 깔리도록 위치/회전 조정
-    StaminaPlaneComp->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f)); // 텍스처 방향에 따라 조절
-    StaminaPlaneComp->SetRelativeScale3D(FVector(5.0f, 5.0f, 5.0f)); // 크기 조절
+	StaminaPlaneComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaminaPlane"));
+	StaminaPlaneComp->SetupAttachment(RootComponent);
+	StaminaPlaneComp->SetUsingAbsoluteRotation(true);
+	StaminaPlaneComp->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
+	StaminaPlaneComp->SetRelativeScale3D(FVector(5.0f, 5.0f, 5.0f));
 }
 
 void AKirboCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-    // KH 추가 (시작)
-    if (StaminaPlaneComp)
-    {
-        // 0번 슬롯에 머티리얼이 들어있다고 가정
-        StaminaMaterialDynamic = StaminaPlaneComp->CreateAndSetMaterialInstanceDynamic(0);
+	if (StaminaPlaneComp)
+	{
+		StaminaMaterialDynamic = StaminaPlaneComp->CreateAndSetMaterialInstanceDynamic(0);
 
-        if (StaminaMaterialDynamic)
-        {
-            StaminaMaterialDynamic->SetScalarParameterValue(FName("Percent"), 1.0f);
-        }
-    } // KH 추가 (끝)
+		if (StaminaMaterialDynamic)
+		{
+			StaminaMaterialDynamic->SetScalarParameterValue(FName("Percent"), 1.0f);
+		}
+	}
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -83,28 +76,13 @@ void AKirboCharacter::BeginPlay()
 			StatComp->InitializeStats(*StatData);
 			GetCharacterMovement()->MaxWalkSpeed = StatComp->GetMoveSpeed();
 			DashCooldownTime = StatComp->GetDodgeCooldown();
+
+			if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+			{
+				UISub->BroadcastHPUpdate(StatComp->CurrentHP, StatComp->BaseStat.MaxHP);
+			}
 		}
 	}
-
-    // 스탯 및 UI 초기화
-    if (CharacterStatTable)
-    {
-        static const FString ContextString(TEXT("Stat Init"));
-        FKirboStatRow* StatData = CharacterStatTable->FindRow<FKirboStatRow>(FName("Player"), ContextString);
-
-        if (StatData)
-        {
-            StatComp->InitializeStats(*StatData);
-            GetCharacterMovement()->MaxWalkSpeed = StatComp->GetMoveSpeed();
-            DashCooldownTime = StatComp->GetDodgeCooldown();
-
-            // UI 업데이트
-            if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
-            {
-                UISub->BroadcastHPUpdate(StatComp->CurrentHP, StatComp->BaseStat.MaxHP);
-            }
-        }
-    }
 }
 
 void AKirboCharacter::EnablePlayerInput()
@@ -112,6 +90,7 @@ void AKirboCharacter::EnablePlayerInput()
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		EnableInput(PlayerController);
+		bIsControlEnabled = true;
 	}
 }
 
@@ -129,31 +108,28 @@ void AKirboCharacter::Tick(float DeltaTime)
 			StopSprint();
 		}
 	}
+	else
+	{
+		float RecoveryRate = 20.0f;
 
-    // KH 추가 (시작)
-    else // 회복 로직
-    {
-        float RecoveryRate = 20.0f;
+		if (StatComp)
+		{
+			StatComp->RecoverStamina(RecoveryRate * DeltaTime);
+		}
+	}
 
-        if (StatComp)
-        {
-            StatComp->RecoverStamina(RecoveryRate * DeltaTime);
-        }
-    }
+	if (StaminaPlaneComp)
+	{
+		FVector CharLoc = GetActorLocation();
+		StaminaPlaneComp->SetWorldLocation(FVector(CharLoc.X, CharLoc.Y, CharLoc.Z - 80.0f)); // 높이 미세 조정
+	}
 
-    if (StaminaPlaneComp) // 머티리얼 업데이트
-    {
-        // 절대 회전이라 위치는 캐릭터를 따라오지만 회전은 고정
-        FVector CharLoc = GetActorLocation();
-        StaminaPlaneComp->SetWorldLocation(FVector(CharLoc.X, CharLoc.Y, CharLoc.Z - 80.0f)); // 높이 미세 조정
-    }
+	if (StatComp)
+	{
+		UpdateStamina(StatComp->CurrentStamina, StatComp->BaseStat.MaxStamina);
+	}
 
-    if (StatComp)
-    {
-        UpdateStamina(StatComp->CurrentStamina, StatComp->BaseStat.MaxStamina);
-    } // KH 추가 (끝)
-
-	if (bIsShooting)
+	if (bIsControlEnabled)
 	{
 		APlayerController* PlayerController = Cast<APlayerController>(GetController());
 		FHitResult Hit;
@@ -209,8 +185,6 @@ void AKirboCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 			&AKirboCharacter::Dash
 		);
 	}
-
-
 }
 
 void AKirboCharacter::Move(const FInputActionValue& Value)
@@ -219,8 +193,18 @@ void AKirboCharacter::Move(const FInputActionValue& Value)
 
 	if (Controller != nullptr)
 	{
-		AddMovementInput(FVector::ForwardVector, MovementVector.X);
-		AddMovementInput(FVector::RightVector, MovementVector.Y);
+		FVector InputWorldDir = FVector(MovementVector.X, MovementVector.Y, 0.f).GetSafeNormal();
+		FVector CharacterForward = GetActorForwardVector();
+		float DotResult = FVector::DotProduct(InputWorldDir, CharacterForward);
+		float SpeedMultiplier = 1.0f;
+
+		if (DotResult < -0.1f)
+		{
+			SpeedMultiplier = 0.6f;
+		}
+
+		AddMovementInput(FVector::ForwardVector, MovementVector.X * SpeedMultiplier);
+		AddMovementInput(FVector::RightVector, MovementVector.Y * SpeedMultiplier);
 	}
 }
 
@@ -251,23 +235,20 @@ void AKirboCharacter::StopSprint()
 
 void AKirboCharacter::Dash()
 {
-    // KH 추가 (시작) : 비용을 40으로 낮춤 -> 달리기를 좀 하다가 써도 발동
-    float DashCost = 40.0f;
+	float DashCost = 40.0f;
 
-    // 현재 스태미나가 비용보다 적으면 못 씀
-    if (!bCanDash || (StatComp && StatComp->CurrentStamina < DashCost)) return;
+	if (!bCanDash || (StatComp && StatComp->CurrentStamina < DashCost)) return;
 
-    FVector DashDir = GetVelocity().IsNearlyZero() ? GetActorForwardVector() : GetVelocity().GetSafeNormal();
-    LaunchCharacter(DashDir * 3000.f, true, true);
+	FVector DashDir = GetVelocity().IsNearlyZero() ? GetActorForwardVector() : GetVelocity().GetSafeNormal();
+	LaunchCharacter(DashDir * 3000.f, true, true);
 
-    if (StatComp)
-    {
-        StatComp->UseStamina(DashCost);
-    }
+	if (StatComp)
+	{
+		StatComp->UseStamina(DashCost);
+	}
 
-    bCanDash = false;
-    GetWorldTimerManager().SetTimer(DashTimerHandle, this, &AKirboCharacter::ResetDash, 0.5f, false);
-    // KH 추가 (끝)
+	bCanDash = false;
+	GetWorldTimerManager().SetTimer(DashTimerHandle, this, &AKirboCharacter::ResetDash, 0.5f, false);
 }
 
 void AKirboCharacter::ResetDash()
@@ -277,12 +258,10 @@ void AKirboCharacter::ResetDash()
 
 void AKirboCharacter::UpdateStamina(float CurrentStamina, float MaxStamina)
 {
-    // KH 추가 (시작)
-    if (StaminaMaterialDynamic)
-    {
-        if (MaxStamina <= 0.0f) MaxStamina = 1.0f; // 0 나누기 방지
-        float Alpha = FMath::Clamp(CurrentStamina / MaxStamina, 0.0f, 1.0f);
-        StaminaMaterialDynamic->SetScalarParameterValue(FName("Percent"), Alpha);
-    }
-    // KH 추가 (끝)
+	if (StaminaMaterialDynamic)
+	{
+		if (MaxStamina <= 0.0f) MaxStamina = 1.0f;
+		float Alpha = FMath::Clamp(CurrentStamina / MaxStamina, 0.0f, 1.0f);
+		StaminaMaterialDynamic->SetScalarParameterValue(FName("Percent"), Alpha);
+	}
 }

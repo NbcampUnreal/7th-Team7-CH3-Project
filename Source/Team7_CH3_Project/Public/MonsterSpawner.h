@@ -2,6 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Engine/DataTable.h"
+#include "MonsterWaveRow.h"
+#include "SimpleMonster.h"
 #include "MonsterSpawner.generated.h"
 
 UCLASS()
@@ -15,34 +18,26 @@ public:
 protected:
     virtual void BeginPlay() override;
 
-    FTimerHandle SpawnTimerHandle;
-
-    void SpawnMonster();
-
-    // Get a random NavMesh location outside the camera view
-    bool GetRandomNavMeshLocationOutsideCamera(FVector& OutLocation, float Radius, int MaxAttempts = 20);
-
-    // Check if a point is visible on the player's TopDown camera
-    bool IsPointInCameraViewTopDown(APlayerController* PC, FVector Point);
-
 public:
-    // BP_Monster or C++ monster class
-    UPROPERTY(EditAnywhere, Category = "Spawning")
-    TSubclassOf<AActor> MonsterClass;
+    UPROPERTY(EditAnywhere, Category = "Wave")
+    UDataTable* WaveDataTable;
 
-    // Center of spawning area
-    UPROPERTY(EditAnywhere, Category = "Spawning")
+    UPROPERTY(EditAnywhere)
+    float SpawnRadius = 2000.f;
+
+    UPROPERTY(EditAnywhere)
     FVector SpawnCenter;
 
-    // How far from center to spawn
-    UPROPERTY(EditAnywhere, Category = "Spawning")
-    float SpawnRadius;
+private:
+    int32 CurrentWave = 1;
+    int32 AliveMonsterCount = 0;
 
-    // Time interval between spawns
-    UPROPERTY(EditAnywhere, Category = "Spawning")
-    float SpawnInterval;
+    void StartWave(int32 WaveNumber);
+    void StartNextWave();
 
-    // Debug visualization
-    UPROPERTY(EditAnywhere, Category = "Spawning")
-    bool bDrawDebug;
+    void SpawnSingleMonster(const FString& MeshName);
+    bool GetRandomNavMeshLocation(FVector& OutLocation);
+
+    UFUNCTION()
+    void OnMonsterDead(ASimpleMonster* DeadMonster);
 };

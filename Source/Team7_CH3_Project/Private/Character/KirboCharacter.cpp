@@ -9,6 +9,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h"
+#include "Components/CapsuleComponent.h"
 
 AKirboCharacter::AKirboCharacter()
 {
@@ -239,6 +240,8 @@ void AKirboCharacter::Dash()
 
 	if (!bCanDash || (StatComp && StatComp->CurrentStamina < DashCost)) return;
 
+	bIsInvincible = true;
+
 	FVector DashDir = GetVelocity().IsNearlyZero() ? GetActorForwardVector() : GetVelocity().GetSafeNormal();
 	LaunchCharacter(DashDir * 3000.f, true, true);
 
@@ -254,6 +257,36 @@ void AKirboCharacter::Dash()
 void AKirboCharacter::ResetDash()
 {
 	bCanDash = true;
+	bIsInvincible = false;
+}
+
+void AKirboCharacter::ResetInvincibility()
+{
+	bIsInvincible = false;
+}
+
+void AKirboCharacter::HandleDeath()
+{
+	if (bIsDead) return;
+	bIsDead = true;
+	bIsControlEnabled = false;
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		DisableInput(PC);
+	}
+
+	if (DeathMontage)
+	{
+		PlayAnimMontage(DeathMontage);
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+	// {
+	// 	   UISub->ShowGameOverScreen(); // UI쪽 맞춰서 함수 넣기
+	// } 게임 오버 UI 띄우는 함수
 }
 
 void AKirboCharacter::UpdateStamina(float CurrentStamina, float MaxStamina)
@@ -264,4 +297,33 @@ void AKirboCharacter::UpdateStamina(float CurrentStamina, float MaxStamina)
 		float Alpha = FMath::Clamp(CurrentStamina / MaxStamina, 0.0f, 1.0f);
 		StaminaMaterialDynamic->SetScalarParameterValue(FName("Percent"), Alpha);
 	}
+}
+
+float AKirboCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (bIsDead || bIsInvincible || ActualDamage <= 0.f || !StatComp)
+	{
+		return 0.f;
+	}
+
+	StatComp->TakeDamage(ActualDamage);
+
+	if (StatComp->CurrentHP > 0.f)
+	{
+		if (HitMontage)
+		{
+			PlayAnimMontage(HitMontage);
+		}
+
+		bIsInvincible = true;
+		GetWorldTimerManager().SetTimer(InvincibilityTimerHandle, this, &AKirboCharacter::ResetInvincibility, 1.0f, false);
+	}
+	else
+	{
+		HandleDeath();
+	}
+
+	return ActualDamage;
 }

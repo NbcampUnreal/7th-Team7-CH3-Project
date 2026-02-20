@@ -228,5 +228,6 @@ void ABaseEnemy::Die()
         PlayAnimMontage(DeathMontages[RandomIdx]);
     }
 
+    bIsAlive = false;
     SetLifeSpan(10.0f);
 }

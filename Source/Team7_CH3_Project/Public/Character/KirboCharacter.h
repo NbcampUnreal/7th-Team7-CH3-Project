@@ -13,6 +13,7 @@ class UKirboStatComponent;
 class UDataTable;
 class UInputMappingContext;
 class UInputAction;
+class UAnimMontage;
 struct FInputActionValue;
 
 UCLASS()
@@ -43,12 +44,20 @@ protected:
 	UInputAction* SprintAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DashAction;
-
 	FTimerHandle DashTimerHandle;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	float DashCooldownTime = 2.0f;
 	bool bCanDash = true;
 	bool bIsShooting = false;
+	bool bIsControlEnabled = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	UAnimMontage* HitMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	UAnimMontage* DeathMontage;
+	bool bIsDead = false;
+	bool bIsInvincible = false; // 무적 상태 확인
+	FTimerHandle InvincibilityTimerHandle;
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -57,10 +66,26 @@ protected:
 	void EnablePlayerInput();
 
 	void Move(const FInputActionValue& Value);
+
 	void StartShot();
 	void StopShot();
+
 	void StartSprint();
 	void StopSprint();
+
 	void Dash();
 	void ResetDash();
+
+	void ResetInvincibility();
+	void HandleDeath();
+
+
+public:
+	UPROPERTY()
+	UMaterialInstanceDynamic* StaminaMaterialDynamic;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	UStaticMeshComponent* StaminaPlaneComp;
+
+	void UpdateStamina(float CurrentStamina, float MaxStamina);
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 };

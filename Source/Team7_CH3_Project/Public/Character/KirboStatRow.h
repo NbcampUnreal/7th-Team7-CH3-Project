@@ -23,8 +23,13 @@ public:
 	float DashCooldown = 2.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float SprintSpeedMultiplier = 1.5f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cost")
 	float SprintStaminaCost = 10.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cost")
+	float DashStaminaCost = 40.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cost")
+	float StaminaRecoveryRate = 20.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float AttackDamageMultiplier = 1.0f;

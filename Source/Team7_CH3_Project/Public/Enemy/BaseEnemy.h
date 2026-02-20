@@ -4,6 +4,7 @@
 
 #include "IEnemy.h"
 #include "Enemy/EnemyProjectile.h"
+#include "Enemy/EnemyObjectData.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "BaseEnemy.generated.h"
@@ -19,6 +20,8 @@ public:
 protected:
     UPROPERTY(EditAnywhere, Category = "Enemy")
     UDataTable* DataTable;
+    UPROPERTY(EditAnywhere, Category = "Enemy")
+    UEnemyObjectData* EnemyObjectData;
     UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = "Enemy")
     FString Name = "BaseEnemy";
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
@@ -42,6 +45,8 @@ protected:
     float AttackRange = 100.f;
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
     float AttackCooldown = 1.5f;
+    UPROPERTY(EditAnywhere, Category = "Enemy|Attack|Ranged")
+    float ProjectileSpeed = 1500.f;
 
     UPROPERTY(EditAnywhere, Category = "Enemy|Action")
     float ActionRange = 1200.f;
@@ -64,13 +69,14 @@ protected:
 
     void LoadData();
 
-    UPROPERTY(EditAnywhere, Category = "Enemy|AttackRelated")
-    TSubclassOf<class AEnemyProjectile> ProjectileClass;
-
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
+    FName MuzzleName = "Muzzle_Front";
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
     class UAnimMontage* AttackMontage;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
     class UAnimMontage* ActionMontage;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
+    TArray<UAnimMontage*> DeathMontages;
 
 public:
     virtual void BeginPlay() override;
@@ -95,6 +101,8 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Enemy/AttackRelated")
     void ExecuteAttackPoint();
+    void ExecuteAttackAnimation();
+    void ExecuteActionAnimation();
 
     virtual float GetAttackRange() const override { return AttackRange; }
     virtual float GetActionRange() const override { return ActionRange; }

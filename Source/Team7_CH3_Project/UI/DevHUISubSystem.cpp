@@ -14,8 +14,6 @@ void UDevHUISubSystem::BroadcastHUDUpdate(int32 Stage, int32 Wave, int32 Kills, 
 
 void UDevHUISubSystem::TriggerWeaponSelection(int32 SelectedIndex)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Subsystem: TriggerWeaponSelection Called with Index %d"), SelectedIndex);
-    // 무기 교체 신호를 보냄
     OnWeaponSelectionChanged.Broadcast(SelectedIndex);
 }
 
@@ -29,6 +27,21 @@ void UDevHUISubSystem::BroadcastWeaponStatus(FString WeaponName, int32 CurrentAm
 {
 
     OnWeaponStatusChanged.Broadcast(WeaponName, CurrentAmmo, MaxAmmo);
+}
+
+void UDevHUISubSystem::BroadcastNormalAttack(float Cooldown)
+{
+    OnAttackCooldownTriggered.Broadcast(Cooldown);
+}
+
+void UDevHUISubSystem::BroadcastSkillAttack(float Cooldown)
+{
+    OnSkillCooldownTriggered.Broadcast(Cooldown);
+}
+
+void UDevHUISubSystem::BroadcastStaminaUpdate(float CurrentStamina, float MaxStamina)
+{
+    OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 }
 
 void UDevHUISubSystem::AddScore(int32 Amount)

@@ -8,7 +8,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Team7_CH3_Project/UI/DevHUISubSystem.h" // UI 연결
+#include "Team7_CH3_Project/UI/DevHUISubSystem.h"
+#include "Components/CapsuleComponent.h"
 
 AKirboCharacter::AKirboCharacter()
 {
@@ -31,11 +32,27 @@ AKirboCharacter::AKirboCharacter()
 
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	StaminaPlaneComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaminaPlane"));
+	StaminaPlaneComp->SetupAttachment(RootComponent);
+	StaminaPlaneComp->SetUsingAbsoluteRotation(true);
+	StaminaPlaneComp->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
+	StaminaPlaneComp->SetRelativeScale3D(FVector(5.0f, 5.0f, 5.0f));
 }
 
 void AKirboCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (StaminaPlaneComp)
+	{
+		StaminaMaterialDynamic = StaminaPlaneComp->CreateAndSetMaterialInstanceDynamic(0);
+
+		if (StaminaMaterialDynamic)
+		{
+			StaminaMaterialDynamic->SetScalarParameterValue(FName("Percent"), 1.0f);
+		}
+	}
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -60,27 +77,13 @@ void AKirboCharacter::BeginPlay()
 			StatComp->InitializeStats(*StatData);
 			GetCharacterMovement()->MaxWalkSpeed = StatComp->GetMoveSpeed();
 			DashCooldownTime = StatComp->GetDodgeCooldown();
+
+			if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+			{
+				UISub->BroadcastHPUpdate(StatComp->CurrentHP, StatComp->BaseStat.MaxHP);
+			}
 		}
 	}
-
-    // UI
-    if (CharacterStatTable)
-    {
-        static const FString ContextString(TEXT("Stat Init"));
-        FKirboStatRow* StatData = CharacterStatTable->FindRow<FKirboStatRow>(FName("Player"), ContextString);
-
-        if (StatData)
-        {
-            StatComp->InitializeStats(*StatData);
-            GetCharacterMovement()->MaxWalkSpeed = StatComp->GetMoveSpeed();
-            DashCooldownTime = StatComp->GetDodgeCooldown();
-
-            if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
-            {
-                UISub->BroadcastHPUpdate(StatComp->CurrentHP, StatComp->BaseStat.MaxHP);
-            }
-        }
-    }
 }
 
 void AKirboCharacter::EnablePlayerInput()
@@ -88,6 +91,7 @@ void AKirboCharacter::EnablePlayerInput()
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		EnableInput(PlayerController);
+		bIsControlEnabled = true;
 	}
 }
 
@@ -107,10 +111,25 @@ void AKirboCharacter::Tick(float DeltaTime)
 	}
 	else
 	{
-		StatComp->RecoverStamina(5.0f * DeltaTime);
+		if (StatComp)
+		{
+			float RecoveryRate = StatComp->GetStaminaRecoveryRate();
+			StatComp->RecoverStamina(RecoveryRate * DeltaTime);
+		}
 	}
 
-	if (bIsShooting)
+	if (StaminaPlaneComp)
+	{
+		FVector CharLoc = GetActorLocation();
+		StaminaPlaneComp->SetWorldLocation(FVector(CharLoc.X, CharLoc.Y, CharLoc.Z - 80.0f)); // 높이 미세 조정
+	}
+
+	if (StatComp)
+	{
+		UpdateStamina(StatComp->CurrentStamina, StatComp->BaseStat.MaxStamina);
+	}
+
+	if (bIsControlEnabled)
 	{
 		APlayerController* PlayerController = Cast<APlayerController>(GetController());
 		FHitResult Hit;
@@ -166,8 +185,6 @@ void AKirboCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 			&AKirboCharacter::Dash
 		);
 	}
-
-
 }
 
 void AKirboCharacter::Move(const FInputActionValue& Value)
@@ -176,8 +193,18 @@ void AKirboCharacter::Move(const FInputActionValue& Value)
 
 	if (Controller != nullptr)
 	{
-		AddMovementInput(FVector::ForwardVector, MovementVector.X);
-		AddMovementInput(FVector::RightVector, MovementVector.Y);
+		FVector InputWorldDir = FVector(MovementVector.X, MovementVector.Y, 0.f).GetSafeNormal();
+		FVector CharacterForward = GetActorForwardVector();
+		float DotResult = FVector::DotProduct(InputWorldDir, CharacterForward);
+		float SpeedMultiplier = 1.0f;
+
+		if (DotResult < -0.1f)
+		{
+			SpeedMultiplier = 0.6f;
+		}
+
+		AddMovementInput(FVector::ForwardVector, MovementVector.X * SpeedMultiplier);
+		AddMovementInput(FVector::RightVector, MovementVector.Y * SpeedMultiplier);
 	}
 }
 
@@ -208,17 +235,92 @@ void AKirboCharacter::StopSprint()
 
 void AKirboCharacter::Dash()
 {
-	if (!bCanDash) return;
+	if (!StatComp) return;
+	float DashCost = StatComp->GetDashStaminaCost();
+
+	if (!bCanDash || (StatComp && StatComp->CurrentStamina < DashCost)) return;
+
+	bIsInvincible = true;
 
 	FVector DashDir = GetVelocity().IsNearlyZero() ? GetActorForwardVector() : GetVelocity().GetSafeNormal();
 	LaunchCharacter(DashDir * 3000.f, true, true);
 
+	StatComp->UseStamina(DashCost);
+
 	bCanDash = false;
-	GetWorldTimerManager().SetTimer(DashTimerHandle, this, &AKirboCharacter::ResetDash, DashCooldownTime, false);
+	GetWorldTimerManager().SetTimer(DashTimerHandle, this, &AKirboCharacter::ResetDash, 0.5f, false);
 }
 
 void AKirboCharacter::ResetDash()
 {
 	bCanDash = true;
+	bIsInvincible = false;
 }
 
+void AKirboCharacter::ResetInvincibility()
+{
+	bIsInvincible = false;
+}
+
+void AKirboCharacter::HandleDeath()
+{
+	if (bIsDead) return;
+	bIsDead = true;
+	bIsControlEnabled = false;
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		DisableInput(PC);
+	}
+
+	if (DeathMontage)
+	{
+		PlayAnimMontage(DeathMontage);
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+	// {
+	// 	   UISub->ShowGameOverScreen(); // UI쪽 맞춰서 함수 넣기
+	// } 게임 오버 UI 띄우는 함수
+}
+
+void AKirboCharacter::UpdateStamina(float CurrentStamina, float MaxStamina)
+{
+	if (StaminaMaterialDynamic)
+	{
+		if (MaxStamina <= 0.0f) MaxStamina = 1.0f;
+		float Alpha = FMath::Clamp(CurrentStamina / MaxStamina, 0.0f, 1.0f);
+		StaminaMaterialDynamic->SetScalarParameterValue(FName("Percent"), Alpha);
+	}
+}
+
+float AKirboCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (bIsDead || bIsInvincible || ActualDamage <= 0.f || !StatComp)
+	{
+		return 0.f;
+	}
+
+	StatComp->TakeDamage(ActualDamage);
+
+	if (StatComp->CurrentHP > 0.f)
+	{
+		if (HitMontage)
+		{
+			PlayAnimMontage(HitMontage);
+		}
+
+		bIsInvincible = true;
+		GetWorldTimerManager().SetTimer(InvincibilityTimerHandle, this, &AKirboCharacter::ResetInvincibility, 1.0f, false);
+	}
+	else
+	{
+		HandleDeath();
+	}
+
+	return ActualDamage;
+}

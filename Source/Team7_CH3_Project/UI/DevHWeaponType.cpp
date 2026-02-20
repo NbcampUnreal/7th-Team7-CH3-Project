@@ -5,7 +5,6 @@
 void UDevHWeaponType::NativeConstruct()
 {
     Super::NativeConstruct();
-    UE_LOG(LogTemp, Error, TEXT("WeaponType UI: I am Alive!")); // 이 로그가 뜨는지 확인!
     // 초기 실행 시 WBP에 적힌 원본 패턴 저장
     if (TextBlock_WeaponType) WeaponNameFormat = TextBlock_WeaponType->GetText();
     if (TextBlock_AmmoCount) AmmoCountFormat = TextBlock_AmmoCount->GetText();
@@ -22,8 +21,6 @@ void UDevHWeaponType::NativeConstruct()
 
 void UDevHWeaponType::HandleWeaponStatusUpdate(FString WeaponName, int32 CurrentAmmo, int32 MaxAmmo)
 {
-    UE_LOG(LogTemp, Warning, TEXT("UI: Signal Received! Name: %s, Ammo: %d"), *WeaponName, CurrentAmmo);
-
     // 무기 이름 업데이트
     if (TextBlock_WeaponType)
     {

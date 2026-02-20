@@ -3,7 +3,10 @@
 
 #include "Enemy/BaseEnemy.h"
 #include "Enemy/EnemyData.h"
+#include "Enemy/EnemyAIControl.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Components/CapsuleComponent.h"
 
 ABaseEnemy::ABaseEnemy()
 {
@@ -17,7 +20,7 @@ void ABaseEnemy::BeginPlay()
     StartChase();
 }
 
-void ABaseEnemy::LoadData()
+void ABaseEnemy::LoadData(int StageCount, int WaveCount)
 {
     if (!DataTable) return;
     static const FString ContextString(TEXT("Enemy Data Context"));
@@ -25,16 +28,27 @@ void ABaseEnemy::LoadData()
     if (EnemyData)
     {
         EnemyType = EnemyData->AttackType;
-        HealthMax = EnemyData->HealthMax;
-        Health = HealthMax;
-        Damage = EnemyData->Damage;
-        Defence = EnemyData->Defense;
+        Defence = EnemyData->Defence;
         AttackRange = EnemyData->AttackRange;
         AttackCooldown = EnemyData->AttackCooldown;
         Movespeed = EnemyData->Movespeed;
+        MovespeedAct = EnemyData->MovespeedAct;
+        ProjectileSpeed = EnemyData->RangeProjectileSpeed;
         GoldDrop = EnemyData->GoldDrop;
         itemChance = EnemyData->ItemDropChance;
         GetCharacterMovement()->MaxWalkSpeed = Movespeed;
+
+        HealthIncStage = EnemyData->StageHealthInc;
+        HealthIncWave = EnemyData->WaveHealthInc;
+        DamageIncStage = EnemyData->StageDamageInc;
+        DamageIncWave = EnemyData->WaveDamageInc;
+
+        float HealthCount = EnemyData->HealthMax + (EnemyData->HealthMax * ((StageCount * HealthIncStage) + (WaveCount * HealthIncWave)));
+        float DamageCount = EnemyData->Damage + (EnemyData->Damage * ((StageCount * DamageIncStage) + (WaveCount * DamageIncWave)));
+
+        HealthMax = HealthCount;
+        Health = HealthCount;
+        Damage = DamageCount;
     }
 }
 
@@ -68,30 +82,13 @@ void ABaseEnemy::StartChase()
 
 void ABaseEnemy::TryAttack()
 {
-    //if (!IsAttackReady() || !AttackMontage) return;
-    if (!IsAttackReady()) return;
+    if (!IsAttackReady() || !AttackMontage) return;
 
-    //PlayAnimMontage(AttackMontage);
     bIsAttackReady = false;
 
-    if (GetAttackType() == EAttackType::Melee)
-    {
-        // Melee attack
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 1.5f, FColor::Red, TEXT("Enemy melee attack performed!"));
-        }
-    }
-    else if (GetAttackType() == EAttackType::Ranged)
-    {
-        // Range attack - create enemy projectile
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 1.5f, FColor::Red, TEXT("Enemy ranged attack performed!"));
-        }
-    }
-
     GetWorldTimerManager().SetTimer(AttackTimers, this, &ABaseEnemy::ResetAttackCooldown, AttackCooldown, false);
+
+    ExecuteAttackAnimation();
 }
 
 void ABaseEnemy::TryAction()
@@ -115,7 +112,7 @@ void ABaseEnemy::TryAction()
 
 void ABaseEnemy::TakeDamage(float DamageAmount)
 {
-    Health -= DamageAmount;
+    Health -= DamageAmount * (100 / (100 + Defence));
     if (Health <= 0.f)
     {
         Die();
@@ -124,25 +121,73 @@ void ABaseEnemy::TakeDamage(float DamageAmount)
 
 void ABaseEnemy::ExecuteAttackPoint()
 {
+    if (!EnemyObjectData) return;
+
     if (EnemyType == EAttackType::Melee)
     {
         FVector Start = GetActorLocation();
         FVector End = Start + (GetActorForwardVector() * AttackRange);
-        UE_LOG(LogTemp, Warning, TEXT("Melee Damage Applied!"));
+        // Melee damage logic here - for works
     }
-    else if (EnemyType == EAttackType::Ranged && ProjectileClass)
+    else if (EnemyType == EAttackType::Ranged && EnemyObjectData->BulletObj)
     {
-        FVector SpawnLocation = GetMesh()->GetSocketLocation("Muzzle_Socket"); // Place a socket on Mixamo hand
-        FRotator SpawnRotation = GetActorRotation();
+        FVector SpawnLocation = GetMesh()->GetSocketLocation(MuzzleName);
+
+        FVector TargetLocation = GetTarget()->GetActorLocation();
+        TargetLocation.Z = SpawnLocation.Z;
+        FRotator FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
 
         FActorSpawnParameters SpawnParams;
         SpawnParams.Owner = this;
 
-        GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, SpawnParams);
+        AEnemyProjectile* Bullet = GetWorld()->SpawnActorDeferred<AEnemyProjectile>(
+            EnemyObjectData->BulletObj, FTransform(FireRotation, SpawnLocation));
+
+        if (Bullet)
+        {
+            Bullet->InitializeProjectile(ProjectileSpeed, Damage, AttackRange * 2);
+            Bullet->FinishSpawning(FTransform(FireRotation, SpawnLocation));
+        }
     }
+}
+
+void ABaseEnemy::ExecuteAttackAnimation()
+{
+    PlayAnimMontage(AttackMontage);
+}
+void ABaseEnemy::ExecuteActionAnimation()
+{
+    PlayAnimMontage(ActionMontage);
 }
 
 void ABaseEnemy::Die()
 {
-    // Dead animation execution
+    if (DeathMontages.Num() == 0)
+    {
+        Destroy();
+        return;
+    }
+
+    if (AEnemyAIControl* AICont = Cast<AEnemyAIControl>(GetController()))
+    {
+        AICont->StopMovement();
+        AICont->UnPossess();
+        AICont->Destroy();
+    }
+
+    GetWorldTimerManager().ClearAllTimersForObject(this);
+
+    bIsAttackReady = false;
+    bIsActionReady = false;
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+    if (DeathMontages.Num() > 0)
+    {
+        int32 RandomIdx = FMath::RandRange(0, DeathMontages.Num() - 1);
+        PlayAnimMontage(DeathMontages[RandomIdx]);
+    }
+
+    SetLifeSpan(10.0f);
 }

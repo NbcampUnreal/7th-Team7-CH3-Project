@@ -4,8 +4,6 @@
 
 void UDevHWeaponInventory::NativeConstruct()
 {
-    UE_LOG(LogTemp, Error, TEXT("Inventory UI: NativeConstruct is Running!"));
-
     Super::NativeConstruct();
 
     WeaponSlotArray.Empty();
@@ -36,8 +34,6 @@ void UDevHWeaponInventory::UpdateWeaponSlot(int32 Index, int32 CurrentScore)
 
 void UDevHWeaponInventory::SelectWeaponSlot(int32 SelectedIndex)
 {
-    UE_LOG(LogTemp, Warning, TEXT("UI Received Weapon Change Index: %d"), SelectedIndex);
-
     for (int32 i = 0; i < WeaponSlotArray.Num(); i++)
     {
         if (WeaponSlotArray[i])

@@ -280,10 +280,10 @@ void AKirboCharacter::HandleDeath()
 
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
-	{
-		UISub->TriggerGameResult(false);
-	}
+	// if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+	// {
+	// 	   UISub->ShowGameOverScreen(); // UI쪽 맞춰서 함수 넣기
+	// } 게임 오버 UI 띄우는 함수
 }
 
 void AKirboCharacter::UpdateStamina(float CurrentStamina, float MaxStamina)

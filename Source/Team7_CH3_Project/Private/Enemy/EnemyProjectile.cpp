@@ -3,6 +3,7 @@
 
 #include "Enemy/EnemyProjectile.h"
 #include "Kismet/GameplayStatics.h"
+#include "Character/KirboCharacter.h"
 
 AEnemyProjectile::AEnemyProjectile()
 {
@@ -12,8 +13,6 @@ AEnemyProjectile::AEnemyProjectile()
     CollisionComponent->InitSphereRadius(10.f);
     CollisionComponent->SetCollisionProfileName(TEXT("Projectile"));
     RootComponent = CollisionComponent;
-
-    CollisionComponent->OnComponentHit.AddDynamic(this, &AEnemyProjectile::OnHit);
 
     ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("MoveComp"));
     ProjectileMovement->InitialSpeed = 2500.f;
@@ -45,21 +44,33 @@ void AEnemyProjectile::InitializeProjectile(float speed, float damage, float max
     ProjectileMovement->MaxSpeed = speed;
     DamageValue = damage;
     MaxRange = maxRange;
+
+    CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &AEnemyProjectile::OnProjectileOverlap);
+    CollisionComponent->SetNotifyRigidBodyCollision(true);
 }
 
-void AEnemyProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void AEnemyProjectile::OnProjectileOverlap(
+    UPrimitiveComponent* OverlappedComponent,
+    AActor* OtherActor,
+    UPrimitiveComponent* OtherComp,
+    int32 OtherBodyIndex,
+    bool bFromSweep,
+    const FHitResult& SweepResult)
 {
     if (OtherActor && OtherActor != GetOwner())
     {
-        // Damage logic here - player cast and call
-        UGameplayStatics::ApplyDamage(
-            OtherActor,
-            DamageValue,
-            GetInstigatorController(),
-            this,
-            UDamageType::StaticClass()
-        );
+        AKirboCharacter* CheckPlayer = Cast<AKirboCharacter>(OtherActor);
+        if (CheckPlayer)
+        {
+            UGameplayStatics::ApplyDamage(
+                OtherActor,
+                DamageValue,
+                GetInstigatorController(),
+                this,
+                UDamageType::StaticClass()
+            );
 
-        Destroy();
+            Destroy();
+        }
     }
 }

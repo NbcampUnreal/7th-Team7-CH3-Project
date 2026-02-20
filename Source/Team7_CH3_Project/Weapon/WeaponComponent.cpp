@@ -3,12 +3,15 @@
 
 #include "Team7_CH3_Project/Weapon/WeaponComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "WeaponData.h"
+#include "GrenadeProjectile.h"
+#include "GrenadeStat.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
 
 // Sets default values for this component's properties
@@ -59,7 +62,17 @@ void UWeaponComponent::BeginPlay()
             UISub->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
         }
     }
-	
+
+	if (GrenadeTable)
+	{
+		FGrenadeStat* Stat = GrenadeTable->FindRow<FGrenadeStat>(GrenadeRowName, TEXT(""));
+		if (Stat)
+		{
+			// 데이터 테이블의 MaxCharges(3)를 가져옴
+			CurrentGrenadeCount = Stat->MaxCharges;
+			UE_LOG(LogTemp, Log, TEXT("Initial Grenades: %d"), CurrentGrenadeCount);
+		}
+	}
 }
 
 void UWeaponComponent::StartFire()
@@ -374,4 +387,130 @@ int32 UWeaponComponent::GetCurrentScore() const
         }
     }
     return 0;
+}
+
+void UWeaponComponent::LaunchGrenade()
+{
+	if (!GrenadeTable)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GrenadeTable is NULL"));
+		return;
+	}
+	// 데이터 테이블에서 설정값 가져오기
+	FGrenadeStat* Stat = GrenadeTable->FindRow<FGrenadeStat>(GrenadeRowName, TEXT(""));
+	if (!Stat || !Stat->GrenadeClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Cannot find Row or GrenadeClass is NULL"));
+		return;
+	}
+	// 남은 개수 체크 (0개 이하면 발사 안 함)
+	if (CurrentGrenadeCount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("수류탄이 없습니다"));
+		return;
+	}
+
+	// 쿨타임 체크
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastGrenadeTime < Stat->CooldownTime)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Grenade on Cooldown Remaining: %.1f"),
+			Stat->CooldownTime - (CurrentTime - LastGrenadeTime));
+		return;
+	}
+
+	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
+	if (!OwnerChar || !OwnerChar->GetMesh()) return;
+
+	// 소켓 위치 가져오기
+	FName SocketName = TEXT("grenade_front");
+	FVector SpawnLocation = OwnerChar->GetMesh()->GetSocketLocation(SocketName);
+	SpawnLocation += OwnerChar->GetActorForwardVector() * 20.f;
+	FRotator SpawnRotation = OwnerChar->GetActorRotation();
+
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		FActorSpawnParameters Params;
+		Params.Owner = OwnerChar;
+		Params.Instigator = OwnerChar;
+
+		// 폭탄 스폰
+		AActor* SpawnedActor = World->SpawnActor<AActor>(Stat->GrenadeClass, SpawnLocation, SpawnRotation, Params);
+
+		if (SpawnedActor)
+		{
+			CurrentGrenadeCount--;
+			LastGrenadeTime = CurrentTime;
+			AGrenadeProjectile* Projectile = Cast<AGrenadeProjectile>(SpawnedActor);
+			UE_LOG(LogTemp, Log, TEXT("수류탄 발사 남은 개수: %d / %d"), CurrentGrenadeCount, Stat->MaxCharges);
+			// 수류탄을 썼으니 충전 타이머 시작
+			if (!GetWorld()->GetTimerManager().IsTimerActive(GrenadeRegenTimerHandle))
+			{
+				GetWorld()->GetTimerManager().SetTimer(
+					GrenadeRegenTimerHandle,
+					this,
+					&UWeaponComponent::RegenerateGrenade,
+					Stat->RegenTime,
+					true // 반복 실행
+				);
+			}
+
+			if (Projectile)
+			{
+				Projectile->MaxDamage = Stat->MaxDamage;
+				Projectile->MinDamage = Stat->MinDamage;
+				Projectile->InnerRadius = Stat->InnerRadius;
+				Projectile->ExplosionRadius = Stat->ExplosionRadius;
+				Projectile->ImpulseStrength = Stat->ImpulseStrength;
+
+				Projectile->ExplosionEffect = Stat->ExplosionEffect;
+				Projectile->ExplosionSound = Stat->ExplosionSound;
+				Projectile->ExplosionCameraShake = Stat->ExplosionCameraShake;
+
+				UProjectileMovementComponent* Movement = Projectile->FindComponentByClass<UProjectileMovementComponent>();
+				if (Movement)
+				{
+					Movement->Velocity = OwnerChar->GetActorForwardVector() * Stat->LaunchForce;
+				}
+			}
+
+			if (Stat->LaunchSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(World, Stat->LaunchSound, SpawnLocation);
+			}
+
+			if (Stat->MuzzleFlash)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Stat->MuzzleFlash, SpawnLocation, SpawnRotation);
+			}
+
+			// 카메라 흔들림 추가
+			if (Stat->FireCameraShake)
+			{
+				APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController());
+				if (PC) PC->ClientStartCameraShake(Stat->FireCameraShake);
+			}
+		}
+	}
+}
+
+void UWeaponComponent::RegenerateGrenade()
+{
+	if (!GrenadeTable) return;
+
+	FGrenadeStat* Stat = GrenadeTable->FindRow<FGrenadeStat>(GrenadeRowName, TEXT(""));
+	if (!Stat) return;
+
+	// 개수 증가
+	CurrentGrenadeCount++;
+	UE_LOG(LogTemp, Log, TEXT("수류탄 1개 충전됨 현재 개수 : %d / %d"), CurrentGrenadeCount, Stat->MaxCharges);
+
+	// 최대치까지 찼다면 타이머 종료
+	if (CurrentGrenadeCount >= Stat->MaxCharges)
+	{
+		CurrentGrenadeCount = Stat->MaxCharges;
+		GetWorld()->GetTimerManager().ClearTimer(GrenadeRegenTimerHandle);
+		UE_LOG(LogTemp, Log, TEXT("수류탄 충전 완료."));
+	}
 }

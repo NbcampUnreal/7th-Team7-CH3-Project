@@ -1,6 +1,5 @@
 ﻿#include "MonsterSpawner.h"
 #include "NavigationSystem.h"
-#include "Engine/World.h"
 #include "TimerManager.h"
 
 AMonsterSpawner::AMonsterSpawner()
@@ -31,46 +30,49 @@ void AMonsterSpawner::StartWave(int32 WaveNumber)
 
     if (!Row) return;
 
-    AliveMonsterCount = 0;
+    AliveEnemyCount = 0;
 
-    for (const FMonsterSpawnInfo& Info : Row->Monsters)
+    for (const FMonsterSpawnInfo& Info : Row->Enemies)
     {
         for (int32 i = 0; i < Info.Count; i++)
         {
-            SpawnSingleMonster(Info.SkeletalMeshName);
+            SpawnSingleEnemy(Info.EnemyClass);
         }
     }
 }
 
-void AMonsterSpawner::SpawnSingleMonster(const FString& MeshName)
+void AMonsterSpawner::SpawnSingleEnemy(
+    TSubclassOf<ABaseEnemy> EnemyClass)
 {
+    if (!EnemyClass) return;
+
     FVector SpawnLocation;
     if (!GetRandomNavMeshLocation(SpawnLocation))
         return;
 
-    ASimpleMonster* Monster =
-        GetWorld()->SpawnActor<ASimpleMonster>(
-            ASimpleMonster::StaticClass(),
+    ABaseEnemy* Enemy =
+        GetWorld()->SpawnActor<ABaseEnemy>(
+            EnemyClass,
             SpawnLocation,
             FRotator::ZeroRotator);
 
-    if (Monster)
+    if (Enemy)
     {
-        Monster->SetMeshByName(MeshName);
+        AliveEnemyCount++;
 
-        AliveMonsterCount++;
-
-        Monster->OnMonsterDeath.AddDynamic(
+        // 기존 Enemy 코드 수정 없이 전멸 감지
+        Enemy->OnDestroyed.AddDynamic(
             this,
-            &AMonsterSpawner::OnMonsterDead);
+            &AMonsterSpawner::HandleEnemyDestroyed);
     }
 }
 
-void AMonsterSpawner::OnMonsterDead(ASimpleMonster* DeadMonster)
+void AMonsterSpawner::HandleEnemyDestroyed(
+    AActor* DestroyedActor)
 {
-    AliveMonsterCount--;
+    AliveEnemyCount--;
 
-    if (AliveMonsterCount <= 0)
+    if (AliveEnemyCount <= 0)
     {
         StartNextWave();
     }
@@ -88,14 +90,16 @@ void AMonsterSpawner::StartNextWave()
         {
             StartWave(CurrentWave);
         },
-        3.0f,
+        3.f,
         false);
 }
 
-bool AMonsterSpawner::GetRandomNavMeshLocation(FVector& OutLocation)
+bool AMonsterSpawner::GetRandomNavMeshLocation(
+    FVector& OutLocation)
 {
     UNavigationSystemV1* NavSys =
-        FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+        FNavigationSystem::GetCurrent<UNavigationSystemV1>(
+            GetWorld());
 
     if (!NavSys) return false;
 

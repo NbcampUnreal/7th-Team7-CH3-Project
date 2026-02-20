@@ -4,7 +4,10 @@
 #include "GameFramework/Character.h"
 #include "SimpleMonster.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterDeath, ASimpleMonster*, Monster);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FOnMonsterDeadSignature,
+    ASimpleMonster*,
+    DeadMonster);
 
 UCLASS()
 class TEAM7_CH3_PROJECT_API ASimpleMonster : public ACharacter
@@ -15,12 +18,13 @@ public:
     ASimpleMonster();
 
     UPROPERTY(BlueprintAssignable)
-    FOnMonsterDeath OnMonsterDeath;
+    FOnMonsterDeadSignature OnMonsterDead;
 
-    void SetMeshByName(const FString& MeshName);
+    UFUNCTION(BlueprintCallable)
+    void ApplyDamage(float Damage);
 
-    UFUNCTION()
-    void TakeDamageSimple(float DamageAmount);
+protected:
+    virtual void BeginPlay() override;
 
 private:
     float MaxHP = 100.f;

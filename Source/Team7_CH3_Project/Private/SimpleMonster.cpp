@@ -5,27 +5,15 @@ ASimpleMonster::ASimpleMonster()
     PrimaryActorTick.bCanEverTick = false;
 }
 
-void ASimpleMonster::SetMeshByName(const FString& MeshName)
+void ASimpleMonster::BeginPlay()
 {
-    if (MeshName.IsEmpty()) return;
-
-    FString Path = FString::Printf(
-        TEXT("/Game/ParagonMinions/Characters/Minions/%s.%s"),
-        *MeshName,
-        *MeshName
-    );
-
-    USkeletalMesh* LoadedMesh = LoadObject<USkeletalMesh>(nullptr, *Path);
-
-    if (LoadedMesh)
-    {
-        GetMesh()->SetSkeletalMesh(LoadedMesh);
-    }
+    Super::BeginPlay();
+    CurrentHP = MaxHP;
 }
 
-void ASimpleMonster::TakeDamageSimple(float DamageAmount)
+void ASimpleMonster::ApplyDamage(float Damage)
 {
-    CurrentHP -= DamageAmount;
+    CurrentHP -= Damage;
 
     if (CurrentHP <= 0.f)
     {
@@ -35,6 +23,6 @@ void ASimpleMonster::TakeDamageSimple(float DamageAmount)
 
 void ASimpleMonster::Die()
 {
-    OnMonsterDeath.Broadcast(this);
+    OnMonsterDead.Broadcast(this);
     Destroy();
 }

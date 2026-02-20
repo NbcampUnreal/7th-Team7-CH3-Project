@@ -54,6 +54,8 @@ protected:
     float AttackRange = 100.f;
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
     float AttackCooldown = 1.5f;
+    UPROPERTY(EditAnywhere, Category = "Enemy|Attack|Melee")
+    float AttackAngle = 85.f;
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack|Ranged")
     float ProjectileSpeed = 750.f;
 

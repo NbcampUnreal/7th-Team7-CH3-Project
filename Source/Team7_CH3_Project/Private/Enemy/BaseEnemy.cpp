@@ -30,9 +30,11 @@ void ABaseEnemy::LoadData(int StageCount, int WaveCount)
         EnemyType = EnemyData->AttackType;
         Defence = EnemyData->Defence;
         AttackRange = EnemyData->AttackRange;
+        ActionRange = EnemyData->ActionRange;
         AttackCooldown = EnemyData->AttackCooldown;
         Movespeed = EnemyData->Movespeed;
         MovespeedAct = EnemyData->MovespeedAct;
+        AttackAngle = EnemyData->MeleeAttackAngle;
         ProjectileSpeed = EnemyData->RangeProjectileSpeed;
         GoldDrop = EnemyData->GoldDrop;
         itemChance = EnemyData->ItemDropChance;
@@ -125,9 +127,46 @@ void ABaseEnemy::ExecuteAttackPoint()
 
     if (EnemyType == EAttackType::Melee)
     {
-        FVector Start = GetActorLocation();
-        FVector End = Start + (GetActorForwardVector() * AttackRange);
-        // Melee damage logic here - for works
+        FVector Center = GetActorLocation();
+        float Radius = AttackRange;
+        float HalfAngleDegree = AttackAngle;
+
+        TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+        ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
+
+        TArray<AActor*> IgnoreActors;
+        IgnoreActors.Add(this);
+
+        TArray<AActor*> OutActors;
+        UKismetSystemLibrary::SphereOverlapActors(
+            GetWorld(),
+            Center,
+            Radius,
+            ObjectTypes,
+            nullptr,
+            IgnoreActors,
+            OutActors
+        );
+
+        FVector Forward = GetActorForwardVector();
+
+        for (AActor* HitActor : OutActors)
+        {
+            FVector DirToTarget = (HitActor->GetActorLocation() - Center).GetSafeNormal();
+            float DotProduct = FVector::DotProduct(Forward, DirToTarget);
+            float CosAngle = FMath::Cos(FMath::DegreesToRadians(HalfAngleDegree));
+
+            if (DotProduct >= CosAngle)
+            {
+                UGameplayStatics::ApplyDamage(
+                    HitActor,
+                    Damage,
+                    GetController(),
+                    this,
+                    UDamageType::StaticClass()
+                );
+            }
+        }
     }
     else if (EnemyType == EAttackType::Ranged && EnemyObjectData->BulletObj)
     {
@@ -145,7 +184,7 @@ void ABaseEnemy::ExecuteAttackPoint()
 
         if (Bullet)
         {
-            Bullet->InitializeProjectile(ProjectileSpeed, Damage, AttackRange * 2);
+            Bullet->InitializeProjectile(ProjectileSpeed, Damage, AttackRange * 1.5f);
             Bullet->FinishSpawning(FTransform(FireRotation, SpawnLocation));
         }
     }

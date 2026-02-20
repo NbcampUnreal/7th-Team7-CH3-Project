@@ -111,10 +111,9 @@ void AKirboCharacter::Tick(float DeltaTime)
 	}
 	else
 	{
-		float RecoveryRate = 20.0f;
-
 		if (StatComp)
 		{
+			float RecoveryRate = StatComp->GetStaminaRecoveryRate();
 			StatComp->RecoverStamina(RecoveryRate * DeltaTime);
 		}
 	}
@@ -236,7 +235,8 @@ void AKirboCharacter::StopSprint()
 
 void AKirboCharacter::Dash()
 {
-	float DashCost = 40.0f;
+	if (!StatComp) return;
+	float DashCost = StatComp->GetDashStaminaCost();
 
 	if (!bCanDash || (StatComp && StatComp->CurrentStamina < DashCost)) return;
 
@@ -245,10 +245,7 @@ void AKirboCharacter::Dash()
 	FVector DashDir = GetVelocity().IsNearlyZero() ? GetActorForwardVector() : GetVelocity().GetSafeNormal();
 	LaunchCharacter(DashDir * 3000.f, true, true);
 
-	if (StatComp)
-	{
-		StatComp->UseStamina(DashCost);
-	}
+	StatComp->UseStamina(DashCost);
 
 	bCanDash = false;
 	GetWorldTimerManager().SetTimer(DashTimerHandle, this, &AKirboCharacter::ResetDash, 0.5f, false);

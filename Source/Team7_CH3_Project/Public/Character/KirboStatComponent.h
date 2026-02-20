@@ -47,4 +47,6 @@ public:
 	float GetSprintSpeed() const { return BaseStat.MoveSpeed * BaseStat.SprintSpeedMultiplier; }
 	float GetDodgeCooldown() const { return BaseStat.DashCooldown; }
 	float GetAttackDamageMultiplier() const { return BaseStat.AttackDamageMultiplier; }
+	float GetDashStaminaCost() const { return BaseStat.DashStaminaCost; }
+	float GetStaminaRecoveryRate() const { return BaseStat.StaminaRecoveryRate; }
 };

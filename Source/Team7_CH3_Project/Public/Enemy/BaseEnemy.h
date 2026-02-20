@@ -31,6 +31,11 @@ protected:
     float Health = 100.f;
     UPROPERTY(EditAnywhere, Category = "Enemy|Status")
     float HealthMax = 100.f;
+    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
+    float HealthIncStage = 0.2f;
+    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
+    float HealthIncWave = 0.05f;
+
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
     float Defence = 5.f;
 
@@ -41,12 +46,16 @@ protected:
     
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
     float Damage = 10.f;
+    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
+    float DamageIncStage = 0.15f;
+    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
+    float DamageIncWave = 0.03f;
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
     float AttackRange = 100.f;
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
     float AttackCooldown = 1.5f;
     UPROPERTY(EditAnywhere, Category = "Enemy|Attack|Ranged")
-    float ProjectileSpeed = 1500.f;
+    float ProjectileSpeed = 750.f;
 
     UPROPERTY(EditAnywhere, Category = "Enemy|Action")
     float ActionRange = 1200.f;
@@ -67,7 +76,7 @@ protected:
     void ResetActionCooldown() { bIsActionReady = true; }
     void ResetMovespeed() { GetCharacterMovement()->MaxWalkSpeed = Movespeed; }
 
-    void LoadData();
+    void LoadData(int StageCount = 0, int WaveCount = 0);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
     FName MuzzleName = "Muzzle_Front";

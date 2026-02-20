@@ -20,7 +20,7 @@ void ABaseEnemy::BeginPlay()
     StartChase();
 }
 
-void ABaseEnemy::LoadData()
+void ABaseEnemy::LoadData(int StageCount, int WaveCount)
 {
     if (!DataTable) return;
     static const FString ContextString(TEXT("Enemy Data Context"));
@@ -28,16 +28,27 @@ void ABaseEnemy::LoadData()
     if (EnemyData)
     {
         EnemyType = EnemyData->AttackType;
-        HealthMax = EnemyData->HealthMax;
-        Health = HealthMax;
-        Damage = EnemyData->Damage;
-        Defence = EnemyData->Defense;
+        Defence = EnemyData->Defence;
         AttackRange = EnemyData->AttackRange;
         AttackCooldown = EnemyData->AttackCooldown;
         Movespeed = EnemyData->Movespeed;
+        MovespeedAct = EnemyData->MovespeedAct;
+        ProjectileSpeed = EnemyData->RangeProjectileSpeed;
         GoldDrop = EnemyData->GoldDrop;
         itemChance = EnemyData->ItemDropChance;
         GetCharacterMovement()->MaxWalkSpeed = Movespeed;
+
+        HealthIncStage = EnemyData->StageHealthInc;
+        HealthIncWave = EnemyData->WaveHealthInc;
+        DamageIncStage = EnemyData->StageDamageInc;
+        DamageIncWave = EnemyData->WaveDamageInc;
+
+        float HealthCount = EnemyData->HealthMax + (EnemyData->HealthMax * ((StageCount * HealthIncStage) + (WaveCount * HealthIncWave)));
+        float DamageCount = EnemyData->Damage + (EnemyData->Damage * ((StageCount * DamageIncStage) + (WaveCount * DamageIncWave)));
+
+        HealthMax = HealthCount;
+        Health = HealthCount;
+        Damage = DamageCount;
     }
 }
 
@@ -101,7 +112,7 @@ void ABaseEnemy::TryAction()
 
 void ABaseEnemy::TakeDamage(float DamageAmount)
 {
-    Health -= DamageAmount;
+    Health -= DamageAmount * (100 / (100 + Defence));
     if (Health <= 0.f)
     {
         Die();

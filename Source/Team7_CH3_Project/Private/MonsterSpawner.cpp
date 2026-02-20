@@ -1,94 +1,114 @@
 ﻿#include "MonsterSpawner.h"
 #include "NavigationSystem.h"
-#include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
-#include "DrawDebugHelpers.h"
+#include "TimerManager.h"
 
 AMonsterSpawner::AMonsterSpawner()
 {
     PrimaryActorTick.bCanEverTick = false;
-
-    SpawnCenter = FVector::ZeroVector;
-    SpawnRadius = 1000.f;
-    SpawnInterval = 5.f;
-    bDrawDebug = true;
 }
 
 void AMonsterSpawner::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Use actor location as SpawnCenter if none specified
     if (SpawnCenter.IsZero())
         SpawnCenter = GetActorLocation();
 
-    // Start repeating timer
-    GetWorld()->GetTimerManager().SetTimer(SpawnTimerHandle, this, &AMonsterSpawner::SpawnMonster, SpawnInterval, true);
+    StartWave(CurrentWave);
 }
 
-// Spawn a monster on NavMesh outside camera view
-void AMonsterSpawner::SpawnMonster()
+void AMonsterSpawner::StartWave(int32 WaveNumber)
 {
-    if (!MonsterClass) return;
+    if (!WaveDataTable) return;
 
-    FVector SpawnLocation;
-    if (GetRandomNavMeshLocationOutsideCamera(SpawnLocation, SpawnRadius, 20))
+    static const FString Context(TEXT("WaveContext"));
+
+    FMonsterWaveRow* Row =
+        WaveDataTable->FindRow<FMonsterWaveRow>(
+            FName(*FString::Printf(TEXT("Wave%d"), WaveNumber)),
+            Context);
+
+    if (!Row) return;
+
+    AliveMonsterCount = 0;
+
+    for (const FMonsterSpawnInfo& Info : Row->Monsters)
     {
-        FActorSpawnParameters SpawnParams;
-        GetWorld()->SpawnActor<AActor>(MonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
-
-        if (bDrawDebug)
-            DrawDebugSphere(GetWorld(), SpawnLocation, 50.f, 12, FColor::Green, false, 2.f);
-
-        UE_LOG(LogTemp, Log, TEXT("Monster spawned at %s"), *SpawnLocation.ToString());
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("No valid NavMesh location outside camera view found"));
-    }
-}
-
-// Get a random NavMesh location outside the TopDown camera view
-bool AMonsterSpawner::GetRandomNavMeshLocationOutsideCamera(FVector& OutLocation, float Radius, int MaxAttempts)
-{
-    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-    if (!NavSys) return false;
-
-    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-    if (!PC) return false;
-
-    for (int i = 0; i < MaxAttempts; i++)
-    {
-        FNavLocation NavLocation;
-        if (NavSys->GetRandomPointInNavigableRadius(SpawnCenter, Radius, NavLocation))
+        for (int32 i = 0; i < Info.Count; i++)
         {
-            if (!IsPointInCameraViewTopDown(PC, NavLocation.Location))
-            {
-                OutLocation = NavLocation.Location;
-                return true;
-            }
+            SpawnSingleMonster(Info.SkeletalMeshName);
         }
     }
-
-    return false; // Could not find valid location
 }
 
-// Check if a point is visible on the TopDown camera
-bool AMonsterSpawner::IsPointInCameraViewTopDown(APlayerController* PC, FVector Point)
+void AMonsterSpawner::SpawnSingleMonster(const FString& MeshName)
 {
-    if (!PC) return false;
+    FVector SpawnLocation;
+    if (!GetRandomNavMeshLocation(SpawnLocation))
+        return;
 
-    FVector2D ScreenPosition;
-    bool bOnScreen = UGameplayStatics::ProjectWorldToScreen(PC, Point, ScreenPosition);
+    ASimpleMonster* Monster =
+        GetWorld()->SpawnActor<ASimpleMonster>(
+            ASimpleMonster::StaticClass(),
+            SpawnLocation,
+            FRotator::ZeroRotator);
 
-    if (!bOnScreen)
-        return false;
+    if (Monster)
+    {
+        Monster->SetMeshByName(MeshName);
 
-    // Get viewport size
-    int32 ViewportX, ViewportY;
-    PC->GetViewportSize(ViewportX, ViewportY);
+        AliveMonsterCount++;
 
-    // Check if point is inside the viewport rectangle
-    return ScreenPosition.X >= 0 && ScreenPosition.X <= ViewportX &&
-        ScreenPosition.Y >= 0 && ScreenPosition.Y <= ViewportY;
+        Monster->OnMonsterDeath.AddDynamic(
+            this,
+            &AMonsterSpawner::OnMonsterDead);
+    }
+}
+
+void AMonsterSpawner::OnMonsterDead(ASimpleMonster* DeadMonster)
+{
+    AliveMonsterCount--;
+
+    if (AliveMonsterCount <= 0)
+    {
+        StartNextWave();
+    }
+}
+
+void AMonsterSpawner::StartNextWave()
+{
+    CurrentWave++;
+
+    FTimerHandle Timer;
+
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer,
+        [this]()
+        {
+            StartWave(CurrentWave);
+        },
+        3.0f,
+        false);
+}
+
+bool AMonsterSpawner::GetRandomNavMeshLocation(FVector& OutLocation)
+{
+    UNavigationSystemV1* NavSys =
+        FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+
+    if (!NavSys) return false;
+
+    FNavLocation NavLocation;
+
+    if (NavSys->GetRandomPointInNavigableRadius(
+        SpawnCenter,
+        SpawnRadius,
+        NavLocation))
+    {
+        OutLocation = NavLocation.Location;
+        return true;
+    }
+
+    return false;
 }

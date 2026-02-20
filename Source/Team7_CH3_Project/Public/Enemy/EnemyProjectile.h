@@ -13,7 +13,18 @@ class TEAM7_CH3_PROJECT_API AEnemyProjectile : public AActor
 {
 	GENERATED_BODY()
 
+private:
+    FVector SpawnLocation;
+
+protected:
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
+
 public:
+    float DamageValue;
+    float MaxRange;
+    AActor* EnemyFired;
+
     AEnemyProjectile();
 
     UPROPERTY(VisibleAnywhere, Category = "Projectile")
@@ -22,6 +33,8 @@ public:
     UPROPERTY(VisibleAnywhere, Category = "Projectile")
     UProjectileMovementComponent* ProjectileMovement;
 
-    void Launch(FVector Direction);
+    void InitializeProjectile(float speed, float damage, float maxRange);
 
+    UFUNCTION()
+    void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 };

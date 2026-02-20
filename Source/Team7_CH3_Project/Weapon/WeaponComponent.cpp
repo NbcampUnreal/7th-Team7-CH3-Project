@@ -12,6 +12,7 @@
 #include "WeaponData.h"
 #include "GrenadeProjectile.h"
 #include "GrenadeStat.h"
+#include "Enemy/IEnemy.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
 
 // Sets default values for this component's properties
@@ -205,9 +206,23 @@ void UWeaponComponent::Fire()
 				{
 					UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->HitSound, Hit.ImpactPoint);
 				}
-
-				UGameplayStatics::ApplyDamage(HitActor, CurrentStat->Damage, OwnerChar->GetController(), OwnerChar, nullptr);
-				UE_LOG(LogTemp, Log, TEXT("Hit: %s"), *HitActor->GetName());
+				IEnemy* Enemy = Cast<IEnemy>(HitActor);
+				if (Enemy)
+				{
+					Enemy->TakeDamage(CurrentStat->Damage);
+					UE_LOG(LogTemp, Log, TEXT("Enemy Hit! Damage: %f"), CurrentStat->Damage);
+				}
+				else
+				{
+					// 몬스터가 아닌 일반 사물(환경 등)일 경우 엔진 표준 데미지 적용
+					UGameplayStatics::ApplyDamage(
+						HitActor,
+						CurrentStat->Damage,
+						OwnerChar->GetController(),
+						OwnerChar,
+						nullptr
+					);
+				}
 			}
 
 			if (CurrentStat->ImpactEffect)

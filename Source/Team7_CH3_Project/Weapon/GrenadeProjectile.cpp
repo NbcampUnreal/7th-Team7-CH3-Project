@@ -7,6 +7,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystem.h"
+#include "Enemy/IEnemy.h"
 #include "DrawDebugHelpers.h"
 
 // Sets default values
@@ -93,8 +94,8 @@ void AGrenadeProjectile::Explode()
 		UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
 	}
 	// 물리적인 밀쳐내기 효과 추가
-	TArray<FHitResult> HitResults;
 	FVector Start = GetActorLocation();
+	TArray<FHitResult> HitResults;
 	FCollisionShape SphereShape = FCollisionShape::MakeSphere(ExplosionRadius);
 
 	// 주변의 물리 컴포넌트들을 찾기
@@ -104,20 +105,35 @@ void AGrenadeProjectile::Explode()
 
 	if (bHasOverlap)
 	{
+		TArray<AActor*> DamagedActors;
+
 		for (const FHitResult& Hit : HitResults)
 		{
+			AActor* HitActor = Hit.GetActor();
 			UPrimitiveComponent* HitComp = Hit.GetComponent();
+
+			if (HitActor && !DamagedActors.Contains(HitActor))
+			{
+				IEnemy* Enemy = Cast<IEnemy>(HitActor);
+				if (Enemy)
+				{
+					float Distance = FVector::Dist(Start, HitActor->GetActorLocation());
+
+					// MinDamage를 활용한 거리별 데미지 보간 (InnerRadius 고려)
+					// Distance가 InnerRadius보다 작으면 MaxDamage, ExplosionRadius에 가까워지면 MinDamage로 보간
+					float DamageRange = ExplosionRadius - InnerRadius;
+					float Alpha = FMath::Clamp((ExplosionRadius - Distance) / DamageRange, 0.0f, 1.0f);
+					float FinalDamage = FMath::Lerp(MinDamage, MaxDamage, Alpha);
+
+					Enemy->TakeDamage(FinalDamage);
+					DamagedActors.Add(HitActor);
+				}
+			}
 			// 물리 시뮬레이션 중인 컴포넌트에만 힘을 가함
 			if (HitComp && HitComp->IsSimulatingPhysics())
 			{
 				// AddRadialImpulse: 중심점에서 바깥쪽으로 힘을 전달
-				HitComp->AddRadialImpulse(
-					Start,
-					ExplosionRadius,
-					ImpulseStrength, // 힘의 세기 
-					ERadialImpulseFalloff::RIF_Linear,
-					true // 벨로시티 변화량으로 적용 (질량 무시)
-				);
+				HitComp->AddRadialImpulse(Start, ExplosionRadius, ImpulseStrength, RIF_Linear, true);
 			}
 		}
 	}
@@ -134,22 +150,6 @@ void AGrenadeProjectile::Explode()
 			1.f                // Falloff (거리에 따른 감쇄)
 		);
 	}
-
-	// 거리별 차등 데미지 적용
-	UGameplayStatics::ApplyRadialDamageWithFalloff(
-		this,
-		MaxDamage,             // Base Damage (중심부)
-		MinDamage,      // Minimum Damage (가장자리 최소 데미지)
-		GetActorLocation(), // 폭발 중심
-		InnerRadius, // Inner Radius (100% 데미지 구간)
-		ExplosionRadius,    // Outer Radius (데미지 종료 구간)
-		1.0f,               // Damage Falloff (거리에 따른 감소 지수)
-		nullptr,
-		TArray<AActor*>(),
-		this,
-		GetInstigatorController(),
-		ECC_Visibility
-	);
 
 	// 시각적 디버깅 (범위 확인용)
 	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f);

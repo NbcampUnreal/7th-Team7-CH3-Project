@@ -2,15 +2,13 @@
 
 
 #include "Character/KirboStatComponent.h"
-#include "Team7_CH3_Project/UI/DevHUISubSystem.h" // UI 델리게이트 헤더
+#include "Team7_CH3_Project/UI/DevHUISubSystem.h"
 
 UKirboStatComponent::UKirboStatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	bWantsInitializeComponent = true;
-
 }
-
 
 void UKirboStatComponent::BeginPlay()
 {
@@ -27,16 +25,14 @@ void UKirboStatComponent::InitializeStats(const FKirboStatRow& InStatData)
 	OnHPChanged.Broadcast(CurrentHP, BaseStat.MaxHP);
 	OnStaminaChanged.Broadcast(CurrentStamina, BaseStat.MaxStamina);
 
-    // 게임 시작 시 UI 서브시스템에 초기 데이터 요청
-    if (UGameInstance* GI = GetWorld()->GetGameInstance())
-    {
-        if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
-        {
-            UISub->BroadcastHPUpdate(CurrentHP, BaseStat.MaxHP);
-            // KH 추가 : 스테미너 초기값도 UI에 알려줘야 처음부터 게이지가 차 보임
-            UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
-        }
-    }
+	if (UGameInstance* GI = GetWorld()->GetGameInstance())
+	{
+		if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
+		{
+			UISub->BroadcastHPUpdate(CurrentHP, BaseStat.MaxHP);
+			UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
+		}
+	}
 }
 
 void UKirboStatComponent::TakeDamage(float Amount)
@@ -44,18 +40,12 @@ void UKirboStatComponent::TakeDamage(float Amount)
 	CurrentHP = FMath::Clamp(CurrentHP - Amount, 0.0f, BaseStat.MaxHP);
 	OnHPChanged.Broadcast(CurrentHP, BaseStat.MaxHP);
 
-    // 데미지 입었을 때 서브시스템을 통해 UI 갱신
-    if (UGameInstance* GI = GetWorld()->GetGameInstance())
-    {
-        if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
-        {
-            UISub->BroadcastHPUpdate(CurrentHP, BaseStat.MaxHP);
-        }
-    }
-
-	if (CurrentHP <= 0.0f)
+	if (UGameInstance* GI = GetWorld()->GetGameInstance())
 	{
-		//대충 사망 처리
+		if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
+		{
+			UISub->BroadcastHPUpdate(CurrentHP, BaseStat.MaxHP);
+		}
 	}
 }
 
@@ -64,14 +54,13 @@ void UKirboStatComponent::Heal(float Amount)
 	CurrentHP = FMath::Clamp(CurrentHP + Amount, 0.0f, BaseStat.MaxHP);
 	OnHPChanged.Broadcast(CurrentHP, BaseStat.MaxHP);
 
-    // 회복했을 때 UI 갱신
-    if (UGameInstance* GI = GetWorld()->GetGameInstance())
-    {
-        if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
-        {
-            UISub->BroadcastHPUpdate(CurrentHP, BaseStat.MaxHP);
-        }
-    }
+	if (UGameInstance* GI = GetWorld()->GetGameInstance())
+	{
+		if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
+		{
+			UISub->BroadcastHPUpdate(CurrentHP, BaseStat.MaxHP);
+		}
+	}
 }
 
 bool UKirboStatComponent::UseStamina(float Amount)
@@ -81,11 +70,10 @@ bool UKirboStatComponent::UseStamina(float Amount)
 		CurrentStamina -= Amount;
 		OnStaminaChanged.Broadcast(CurrentStamina, BaseStat.MaxStamina);
 
-        // KH 추가 : UI 서브시스템 알림
-        if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
-        {
-            UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
-        }
+		if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+		{
+			UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
+		}
 
 		return true;
 	}
@@ -97,9 +85,8 @@ void UKirboStatComponent::RecoverStamina(float Amount)
 	CurrentStamina = FMath::Clamp(CurrentStamina + Amount, 0.0f, BaseStat.MaxStamina);
 	OnStaminaChanged.Broadcast(CurrentStamina, BaseStat.MaxStamina);
 
-    // KH 추가 : 회복 시에도 UI 갱신
-    if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
-    {
-        UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
-    }
+	if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+	{
+		UISub->BroadcastStaminaUpdate(CurrentStamina, BaseStat.MaxStamina);
+	}
 }

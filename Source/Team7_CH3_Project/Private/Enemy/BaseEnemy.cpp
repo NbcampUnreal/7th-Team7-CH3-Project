@@ -16,34 +16,37 @@ ABaseEnemy::ABaseEnemy()
 void ABaseEnemy::BeginPlay()
 {
     Super::BeginPlay();
-    LoadData();
-    StartChase();
 }
 
 void ABaseEnemy::LoadData(int StageCount, int WaveCount)
 {
     if (!DataTable) return;
+
     static const FString ContextString(TEXT("Enemy Data Context"));
     FEnemyData* EnemyData = DataTable->FindRow<FEnemyData>(*Name, ContextString);
+
     if (EnemyData)
     {
-        EnemyType = EnemyData->AttackType;
-        Defence = EnemyData->Defence;
-        AttackRange = EnemyData->AttackRange;
-        ActionRange = EnemyData->ActionRange;
-        AttackCooldown = EnemyData->AttackCooldown;
-        Movespeed = EnemyData->Movespeed;
-        MovespeedAct = EnemyData->MovespeedAct;
-        AttackAngle = EnemyData->MeleeAttackAngle;
-        ProjectileSpeed = EnemyData->RangeProjectileSpeed;
-        GoldDrop = EnemyData->GoldDrop;
-        itemChance = EnemyData->ItemDropChance;
-        GetCharacterMovement()->MaxWalkSpeed = Movespeed;
-
         HealthIncStage = EnemyData->StageHealthInc;
         HealthIncWave = EnemyData->WaveHealthInc;
         DamageIncStage = EnemyData->StageDamageInc;
         DamageIncWave = EnemyData->WaveDamageInc;
+
+        EnemyType = EnemyData->AttackType;
+        Defence = EnemyData->Defence;
+        Movespeed = EnemyData->Movespeed;
+        MovespeedAct = EnemyData->MovespeedAct;
+        AttackRange = EnemyData->AttackRange;
+        AttackCooldown = EnemyData->AttackCooldown;
+        AttackAngle = EnemyData->MeleeAttackAngle;
+        ProjectileSpeed = EnemyData->RangeProjectileSpeed;
+        ActionRange = EnemyData->ActionRange;
+        ActionCooldown = EnemyData->ActionCooldown;
+        GoldDrop = EnemyData->GoldDrop;
+        ScoreDrop = EnemyData->ScoreDrop;
+        itemChance = EnemyData->ItemDropChance;
+
+        GetCharacterMovement()->MaxWalkSpeed = Movespeed;
 
         float HealthCount = EnemyData->HealthMax + (EnemyData->HealthMax * ((StageCount * HealthIncStage) + (WaveCount * HealthIncWave)));
         float DamageCount = EnemyData->Damage + (EnemyData->Damage * ((StageCount * DamageIncStage) + (WaveCount * DamageIncWave)));
@@ -52,6 +55,9 @@ void ABaseEnemy::LoadData(int StageCount, int WaveCount)
         Health = HealthCount;
         Damage = DamageCount;
     }
+
+    bIsLoaded = true;
+    StartChase();
 }
 
 bool ABaseEnemy::HasLineOfSight() const
@@ -229,5 +235,8 @@ void ABaseEnemy::Die()
     }
 
     bIsAlive = false;
+
+    // Gold - Score get on game managing state
+
     SetLifeSpan(10.0f);
 }

@@ -31,6 +31,14 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	TSubclassOf<class UCameraShakeBase> ExplosionCameraShake;
 
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	TObjectPtr<class UMaterialInterface> ExplosionDecal;
+
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	float FlashIntensity = 0.f;
+
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	FLinearColor FlashColor;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

@@ -44,7 +44,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStaminaChanged,
     float, CurrentStamina,
     float, MaxStamina
 );
-
+// 델리게이트 선언: 공격 재장전 시간을 알리는 신호
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnReloadTriggered,
+    float, ReloadTime
+);
+// 델리게이트 선언: 수류탄 충전 시간을 알리는 신호
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrenadeRegenTriggered,
+    float, RegenTime
+);
 
 UCLASS()
 class TEAM7_CH3_PROJECT_API UDevHUISubSystem : public UGameInstanceSubsystem
@@ -69,6 +76,11 @@ public:
     FOnSkillCooldownTriggered OnSkillCooldownTriggered;
     UPROPERTY(BlueprintAssignable, Category = "UI | Events")
     FOnStaminaChanged OnStaminaChanged;
+    UPROPERTY(BlueprintAssignable, Category = "UI | Events")
+    FOnReloadTriggered OnReloadTriggered;
+
+    UPROPERTY(BlueprintAssignable, Category = "UI | Events")
+    FOnGrenadeRegenTriggered OnGrenadeRegenTriggered;
 
     // 신호 발신 함수 (로직에서 호출)
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
@@ -87,6 +99,10 @@ public:
     void BroadcastSkillAttack(float Cooldown); // 스킬 작동하면 호출
     UFUNCTION(BlueprintCallable, Category = "UI | Function")
     void BroadcastStaminaUpdate(float CurrentStamina, float MaxStamina); // 스테미나 변하면 호출
+    UFUNCTION(BlueprintCallable, Category = "UI | Function")
+    void BroadcastReload(float ReloadTime);
+    UFUNCTION(BlueprintCallable, Category = "UI | Function")
+    void BroadcastGrenadeRegen(float RegenTime);
 
 public:
     UPROPERTY(BlueprintReadOnly, Category = "UI | Data")

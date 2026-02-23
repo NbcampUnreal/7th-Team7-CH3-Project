@@ -44,6 +44,16 @@ void UDevHUISubSystem::BroadcastStaminaUpdate(float CurrentStamina, float MaxSta
     OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 }
 
+void UDevHUISubSystem::BroadcastReload(float ReloadTime)
+{
+    OnReloadTriggered.Broadcast(ReloadTime);
+}
+
+void UDevHUISubSystem::BroadcastGrenadeRegen(float RegenTime)
+{
+    OnGrenadeRegenTriggered.Broadcast(RegenTime);
+}
+
 void UDevHUISubSystem::AddScore(int32 Amount)
 {
     CurrentScore += Amount;

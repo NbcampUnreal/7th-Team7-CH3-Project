@@ -4,7 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "Engine/DataTable.h"
 #include "MonsterWaveRow.h"
-#include "SimpleMonster.h"
+#include "Enemy/BaseEnemy.h"
 #include "MonsterSpawner.generated.h"
 
 UCLASS()
@@ -22,22 +22,25 @@ public:
     UPROPERTY(EditAnywhere, Category = "Wave")
     UDataTable* WaveDataTable;
 
-    UPROPERTY(EditAnywhere)
+    UPROPERTY(EditAnywhere, Category = "Spawn")
     float SpawnRadius = 2000.f;
 
-    UPROPERTY(EditAnywhere)
+    UPROPERTY(EditAnywhere, Category = "Spawn")
     FVector SpawnCenter;
 
 private:
     int32 CurrentWave = 1;
-    int32 AliveMonsterCount = 0;
+    int32 AliveEnemyCount = 0;
 
     void StartWave(int32 WaveNumber);
     void StartNextWave();
 
-    void SpawnSingleMonster(const FString& MeshName);
-    bool GetRandomNavMeshLocation(FVector& OutLocation);
+    void SpawnSingleEnemy(
+        TSubclassOf<ABaseEnemy> EnemyClass);
+
+    bool GetRandomNavMeshLocation(
+        FVector& OutLocation);
 
     UFUNCTION()
-    void OnMonsterDead(ASimpleMonster* DeadMonster);
+    void HandleEnemyDestroyed(AActor* DestroyedActor);
 };

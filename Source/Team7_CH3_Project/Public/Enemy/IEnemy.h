@@ -57,4 +57,5 @@ public:
     virtual float GetItemChance() const = 0;
 
 	virtual void Die() = 0;
+	virtual bool IsAlive() const = 0;
 };

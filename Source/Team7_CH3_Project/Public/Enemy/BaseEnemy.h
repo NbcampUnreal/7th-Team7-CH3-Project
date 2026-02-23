@@ -89,6 +89,8 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
     TArray<UAnimMontage*> DeathMontages;
 
+    bool bIsAlive = true;
+
 public:
     virtual void BeginPlay() override;
 
@@ -127,4 +129,5 @@ public:
     virtual float GetItemChance() const override { return itemChance; }
 
     virtual void Die() override;
+    virtual bool IsAlive() const override { return bIsAlive; }
 };

@@ -4,14 +4,14 @@
 #include "Team7_CH3_Project/Weapon/WeaponComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
-#include "WeaponData.h"
 #include "GrenadeProjectile.h"
 #include "GrenadeStat.h"
+#include "WeaponData.h"
 #include "Enemy/IEnemy.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
 
@@ -208,12 +208,12 @@ void UWeaponComponent::Fire()
 
 		// 맞았을 때는 빨간색, 안 맞았을 때는 초록색으로 표시
 		FColor LineColor = bHit ? FColor::Red : FColor::Green;
-		DrawDebugLine(World, Start, End, LineColor, false, 1.0f, 0, 0.5f);
+		DrawDebugLine(World, Start, FinalEnd, LineColor, false, 1.0f, 0, 0.5f);
 
 		if (CurrentStat->TracerEffect)
 		{
 			// 나이아가라 시스템 스폰
-			UNiagaraComponent* Tracer = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			UParticleSystemComponent* Tracer = UGameplayStatics::SpawnEmitterAtLocation(
 				GetWorld(),
 				CurrentStat->TracerEffect,
 				Start,
@@ -222,7 +222,7 @@ void UWeaponComponent::Fire()
 
 			if (Tracer)
 			{
-				Tracer->SetNiagaraVariablePosition(TEXT("User.Target"), FinalEnd);
+				Tracer->SetVectorParameter(TEXT("Target"), FinalEnd);
 			}
 		}
 
@@ -549,6 +549,10 @@ void UWeaponComponent::LaunchGrenade()
 				Projectile->InnerRadius = Stat->InnerRadius;
 				Projectile->ExplosionRadius = Stat->ExplosionRadius;
 				Projectile->ImpulseStrength = Stat->ImpulseStrength;
+
+				Projectile->ExplosionDecal = Stat->ExplosionDecal;
+				Projectile->FlashIntensity = Stat->FlashIntensity;
+				Projectile->FlashColor = Stat->FlashColor;
 
 				Projectile->ExplosionEffect = Stat->ExplosionEffect;
 				Projectile->ExplosionSound = Stat->ExplosionSound;

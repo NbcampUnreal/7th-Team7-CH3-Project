@@ -4,9 +4,12 @@
 #include "GrenadeProjectile.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/DecalComponent.h"
+#include "Components/PointLightComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystem.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "Enemy/IEnemy.h"
 #include "DrawDebugHelpers.h"
 
@@ -84,6 +87,59 @@ void AGrenadeProjectile::Explode()
 	UWorld* World = GetWorld();
 	if (!World) return;
 
+	FVector Start = GetActorLocation();
+
+	if (ExplosionDecal)
+	{
+		// 폭발 지점에서 아래 방향으로 레이를 쏴서 지면 확인
+		FHitResult GroundHit;
+		FVector TraceEnd = Start + (FVector::DownVector * 500.f);
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(this);
+		if (GetOwner()) Params.AddIgnoredActor(GetOwner());
+
+		if (World->LineTraceSingleByChannel(GroundHit, Start, TraceEnd, ECC_Visibility, Params))
+		{
+			FVector DecalSize(ExplosionRadius, ExplosionRadius, ExplosionRadius);
+			// SpawnDecalAtLocation(World, Material, Size, Location, Rotation, LifeSpan)
+			// 지면의 노멀(Normal) 방향에 맞춰 데칼을 생성
+			UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(
+				World,
+				ExplosionDecal,
+				DecalSize,
+				GroundHit.ImpactPoint,
+				GroundHit.ImpactNormal.Rotation(),
+				10.0f // 10초 후 소멸
+			);
+			if (Decal)
+			{
+				// 서서히 사라지는 페이드 효과 (선택 사항)
+				Decal->SetFadeOut(8.0f, 2.0f);
+			}
+		}
+	}
+
+	// 순간 광원(Flash Light) 효과
+	// 언리얼에서 전용 액터를 스폰하거나, 임시 컴포넌트를 생성합니다.
+	UPointLightComponent* FlashLight = NewObject<UPointLightComponent>(this);
+	if (FlashLight)
+	{
+		FlashLight->RegisterComponent();
+		FlashLight->SetWorldLocation(Start);
+		FlashLight->SetIntensity(FlashIntensity);
+		FlashLight->SetLightColor(FlashColor);
+		FlashLight->SetAttenuationRadius(ExplosionRadius * 1.5f); // 폭발 범위보다 조금 더 넓게
+
+		// 아주 짧은 시간(0.1초) 뒤에 불빛 제거
+		FTimerHandle LightTimer;
+		World->GetTimerManager().SetTimer(LightTimer, [FlashLight]() {
+			if (FlashLight && FlashLight->IsValidLowLevel())
+			{
+				FlashLight->DestroyComponent();
+			}
+			}, 0.1f, false);
+	}
 	if (ExplosionEffect)
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(World, ExplosionEffect, GetActorLocation(), GetActorRotation());
@@ -94,7 +150,6 @@ void AGrenadeProjectile::Explode()
 		UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
 	}
 	// 물리적인 밀쳐내기 효과 추가
-	FVector Start = GetActorLocation();
 	TArray<FHitResult> HitResults;
 	FCollisionShape SphereShape = FCollisionShape::MakeSphere(ExplosionRadius);
 
@@ -106,6 +161,8 @@ void AGrenadeProjectile::Explode()
 	if (bHasOverlap)
 	{
 		TArray<AActor*> DamagedActors;
+		float DamageRange = ExplosionRadius - InnerRadius;
+		if (DamageRange <= 0.0f) DamageRange = 1.0f;
 
 		for (const FHitResult& Hit : HitResults)
 		{
@@ -121,7 +178,6 @@ void AGrenadeProjectile::Explode()
 
 					// MinDamage를 활용한 거리별 데미지 보간 (InnerRadius 고려)
 					// Distance가 InnerRadius보다 작으면 MaxDamage, ExplosionRadius에 가까워지면 MinDamage로 보간
-					float DamageRange = ExplosionRadius - InnerRadius;
 					float Alpha = FMath::Clamp((ExplosionRadius - Distance) / DamageRange, 0.0f, 1.0f);
 					float FinalDamage = FMath::Lerp(MinDamage, MaxDamage, Alpha);
 

@@ -14,6 +14,8 @@
 #include "WeaponData.h"
 #include "Enemy/IEnemy.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
+#include "Team7_CH3_Project/UI/DevHHUD.h" // KH 추가 : UI
+#include "Team7_CH3_Project/UI/DevHCrosshairWidget.h" // KH 추가 : UI
 
 // Sets default values for this component's properties
 UWeaponComponent::UWeaponComponent()
@@ -232,7 +234,7 @@ void UWeaponComponent::Fire()
 			DrawDebugSphere(World, Hit.ImpactPoint, 10.0f, 12, FColor::Red, false, 0.1f);
 			AActor* HitActor = Hit.GetActor();
 
-			if (IsValid(HitActor))
+            if (HitActor && IsValid(HitActor)) // KH 260223 추가 : HitActor
 			{
 				if (CurrentStat->HitSound)
 				{
@@ -240,11 +242,23 @@ void UWeaponComponent::Fire()
 				}
 
 				IEnemy* Enemy = Cast<IEnemy>(HitActor);
-				if (Enemy)
-				{
-					Enemy->TakeDamage(CurrentStat->Damage);
-					UE_LOG(LogTemp, Log, TEXT("Enemy Hit! Damage: %f"), CurrentStat->Damage);
-				}
+                if (Enemy)
+                {
+                    Enemy->TakeDamage(CurrentStat->Damage);
+                    UE_LOG(LogTemp, Log, TEXT("Enemy Hit! Damage: %f"), CurrentStat->Damage);
+
+                    if (PC) // KH 260223 추가 : 적을 맞췄을 때
+                    {
+                        if (ADevHHUD* DevHUD = Cast<ADevHHUD>(PC->GetHUD()))
+                        {
+                            if (UDevHCrosshairWidget* Crosshair = DevHUD->GetCrosshairWidget())
+                            {
+                                // 적을 맞춘 순간에만 애니메이션 실행
+                                Crosshair->PlayHitMarker();
+                            }
+                        }
+                    }
+                }
 				else
 				{
 					// 몬스터가 아닌 일반 사물(환경 등)일 경우 엔진 표준 데미지 적용

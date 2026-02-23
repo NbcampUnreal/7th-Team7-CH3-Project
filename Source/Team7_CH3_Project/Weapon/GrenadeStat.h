@@ -48,9 +48,16 @@ struct FGrenadeStat : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TObjectPtr<class USoundBase> ExplosionSound; // 폭발 소리
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	TObjectPtr<class UMaterialInterface> ExplosionDecal; // 폭발 지면에 남길 그을림 효과
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	float FlashIntensity = 5000.f; // 폭발 순간 반짝이는 빛의 세기 및 색상
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	FLinearColor FlashColor = FLinearColor(1.0f, 0.6f, 0.2f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TSubclassOf<class UCameraShakeBase> FireCameraShake; // 발사 시 화면 흔들림
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TSubclassOf<class UCameraShakeBase> ExplosionCameraShake;
+	
 
 	//  클래스 정보
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Class")

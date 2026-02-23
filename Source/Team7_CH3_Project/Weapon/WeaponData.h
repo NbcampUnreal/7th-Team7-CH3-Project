@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "NiagaraSystem.h"
 #include "WeaponData.generated.h"
 
 
@@ -49,7 +48,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
     TObjectPtr<UParticleSystem> ImpactEffect = nullptr; // 탄착점 이펙트
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
-    UNiagaraSystem* TracerEffect = nullptr; // 탄환 궤적 (나이아가라)
+    TObjectPtr<UParticleSystem> TracerEffect = nullptr; // 탄환 궤적
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
     TObjectPtr<USoundBase> FireSound = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")

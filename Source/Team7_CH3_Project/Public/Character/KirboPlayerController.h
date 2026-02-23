@@ -16,4 +16,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+    virtual void PlayerTick(float DeltaTime) override; // KH 260223 추가 : 크로스헤어 구현
+    void UpdateCrosshair(); // KH 260223 추가 : 크로스헤어 구현
 };

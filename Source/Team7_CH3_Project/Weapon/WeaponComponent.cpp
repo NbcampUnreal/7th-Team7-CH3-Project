@@ -145,21 +145,53 @@ void UWeaponComponent::Fire()
 	ACharacter* OwnerChar = Cast<ACharacter>(OwnerActor);
 	if (!OwnerChar) return;
 
-	USkeletalMeshComponent* Mesh = OwnerChar->GetMesh();
-	if (!IsValid(Mesh)) return;
+	APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController());
+	if (!PC) return;
 
+	USkeletalMeshComponent* Mesh = OwnerChar->GetMesh();
 	UWorld* World = GetWorld();
-	if (!World) return;
+	if (!Mesh || !World) return;
 
 	// 좌우 소켓 스위칭 및 사격 시작점 설정
 	FName TargetSocketName = bIsNextShotLeft ? LeftMuzzleSocketName : RightMuzzleSocketName;
 	FVector Start = Mesh->GetSocketLocation(TargetSocketName);
 
-	// 카메라가 바라보는 정면 방향을 기준으로 조준점 설정
-	FVector FireDir = OwnerChar->GetActorForwardVector();
+	FHitResult CursorHit;
+	bool bHitCursor = PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+	FVector FireDir;
 
+	if (bHitCursor)
+	{
+		FVector TargetPoint = CursorHit.ImpactPoint;
+		TargetPoint.Z = Start.Z;
+
+		FVector BodyDir = (TargetPoint - OwnerChar->GetActorLocation());
+		BodyDir.Z = 0.f;
+		if (!BodyDir.IsNearlyZero())
+		{
+			// 몸은 이 방향으로만 고정
+			OwnerChar->SetActorRotation(BodyDir.GetSafeNormal().Rotation());
+		}
+
+		float DistToMouse = FVector::Dist2D(OwnerChar->GetActorLocation(), TargetPoint);
+		if (DistToMouse < 100.f)
+		{
+			FireDir = OwnerChar->GetActorForwardVector();
+		}
+		else
+		{
+			FireDir = (TargetPoint - Start).GetSafeNormal();
+		}
+	}
+	else
+	{
+		FireDir = OwnerChar->GetActorForwardVector();
+	}
+	
 	// PelletCount 만큼 라인트레이스 반복
 	int32 TotalPellets = FMath::Max(1, CurrentStat->PelletCount);
+	bool bIsShotgun = (TotalPellets > 1);
+
 	for (int32 i = 0; i < TotalPellets; i++)
 	{
 		// 탄퍼짐 계산 (Cone 형태의 랜덤 방향 생성)
@@ -198,14 +230,15 @@ void UWeaponComponent::Fire()
 		{
 			// 맞은 지점에 작은 구체 표시
 			DrawDebugSphere(World, Hit.ImpactPoint, 10.0f, 12, FColor::Red, false, 0.1f);
-
 			AActor* HitActor = Hit.GetActor();
+
 			if (IsValid(HitActor))
 			{
 				if (CurrentStat->HitSound)
 				{
 					UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->HitSound, Hit.ImpactPoint);
 				}
+
 				IEnemy* Enemy = Cast<IEnemy>(HitActor);
 				if (Enemy)
 				{
@@ -218,7 +251,7 @@ void UWeaponComponent::Fire()
 					UGameplayStatics::ApplyDamage(
 						HitActor,
 						CurrentStat->Damage,
-						OwnerChar->GetController(),
+						PC,
 						OwnerChar,
 						nullptr
 					);

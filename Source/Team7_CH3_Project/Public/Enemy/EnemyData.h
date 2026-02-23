@@ -53,6 +53,8 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float AttackCooldown;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float ActionCooldown;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float Movespeed;
@@ -68,6 +70,8 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int32 GoldDrop;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 ScoreDrop;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float ItemDropChance;

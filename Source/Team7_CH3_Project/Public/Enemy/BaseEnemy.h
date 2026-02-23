@@ -22,51 +22,62 @@ protected:
     UDataTable* DataTable;
     UPROPERTY(EditAnywhere, Category = "Enemy")
     UEnemyObjectData* EnemyObjectData;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = "Enemy")
-    FString Name = "BaseEnemy";
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    FString Name = "BaseEnemy";
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Enemy")
     EAttackType EnemyType = EAttackType::Melee;
 
-    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
-    float Health = 100.f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
-    float HealthMax = 100.f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
-    float HealthIncStage = 0.2f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
-    float HealthIncWave = 0.05f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
+    FName MuzzleName = "Muzzle_Front";
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
+    class UAnimMontage* AttackMontage;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
+    class UAnimMontage* ActionMontage;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
+    TArray<UAnimMontage*> DeathMontages;
 
-    UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
+    UPROPERTY()
+    float HealthIncStage = 0.2f;
+    UPROPERTY()
+    float HealthIncWave = 0.05f;
+    UPROPERTY()
+    float DamageIncStage = 0.15f;
+    UPROPERTY()
+    float DamageIncWave = 0.03f;
+
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Status")
+    float Health = 100.f;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Status")
+    float HealthMax = 100.f;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Status")
     float Defence = 5.f;
 
-    UPROPERTY(EditAnywhere, Category = "Enemy|Movement")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Movement")
     float Movespeed = 375.f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Movement")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Movement")
     float MovespeedAct = 250.f;
     
-    UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack")
     float Damage = 10.f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
-    float DamageIncStage = 0.15f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Status")
-    float DamageIncWave = 0.03f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack")
     float AttackRange = 100.f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Attack")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack")
     float AttackCooldown = 1.5f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Attack|Melee")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack|Melee")
     float AttackAngle = 85.f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Attack|Ranged")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack|Ranged")
     float ProjectileSpeed = 750.f;
 
-    UPROPERTY(EditAnywhere, Category = "Enemy|Action")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Action")
     float ActionRange = 1200.f;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Action")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Action")
     float ActionCooldown = 5.f;
     
-    UPROPERTY(EditAnywhere, Category = "Enemy|Reward")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Reward")
     int GoldDrop = 20;
-    UPROPERTY(EditAnywhere, Category = "Enemy|Reward")
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Reward")
+    int ScoreDrop = 20;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Reward")
     float itemChance = 0.2f;
     
     bool bIsAttackReady = true;
@@ -78,21 +89,14 @@ protected:
     void ResetActionCooldown() { bIsActionReady = true; }
     void ResetMovespeed() { GetCharacterMovement()->MaxWalkSpeed = Movespeed; }
 
-    void LoadData(int StageCount = 0, int WaveCount = 0);
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    FName MuzzleName = "Muzzle_Front";
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    class UAnimMontage* AttackMontage;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    class UAnimMontage* ActionMontage;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    TArray<UAnimMontage*> DeathMontages;
-
+    bool bIsLoaded = false;
     bool bIsAlive = true;
 
 public:
     virtual void BeginPlay() override;
+    virtual void LoadData(int StageCount = 0, int WaveCount = 0) override;
+
+    virtual bool IsLoaded() override { return bIsLoaded; }
 
     virtual FString GetName() const override { return Name; }
 

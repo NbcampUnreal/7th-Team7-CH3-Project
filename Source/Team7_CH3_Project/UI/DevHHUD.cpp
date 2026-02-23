@@ -22,8 +22,19 @@ void ADevHHUD::BeginPlay()
     {
         if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
         {
-            // 1. 게임 결과 신호
+            // 게임 결과 신호
             UISub->OnGameResultChanged.AddDynamic(this, &ADevHHUD::HandleGameResult);
+        }
+    }
+
+    // 커서 생성 및 관리
+    if (CrosshairWidgetClass)
+    {
+        CrosshairInstance = CreateWidget<UDevHCrosshairWidget>(GetOwningPlayerController(), CrosshairWidgetClass);
+        if (CrosshairInstance)
+        {
+            CrosshairInstance->AddToViewport(10);
+            UE_LOG(LogTemp, Log, TEXT("Crosshair Widget Created Successfully!"));
         }
     }
 }

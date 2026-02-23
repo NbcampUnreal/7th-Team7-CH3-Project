@@ -12,10 +12,12 @@ void UAttackStatus::NativeConstruct()
     {
         if (UDevHUISubSystem* UISub = GI->GetSubsystem<UDevHUISubSystem>())
         {
-            // 서브시스템에서 공격 신호가 오면 내 UI 함수 실행!
+            // 서브시스템에서 공격 신호가 오면 내 UI 함수 실행
             UISub->OnAttackCooldownTriggered.AddDynamic(this, &UAttackStatus::TriggerNormalAttackUI);
             UISub->OnSkillCooldownTriggered.AddDynamic(this, &UAttackStatus::TriggerSkillUI);
 
+            // 재장전 신호가 오면 일반 공격 슬롯 UI를 실행
+            UISub->OnReloadTriggered.AddDynamic(this, &UAttackStatus::TriggerNormalAttackUI);
             // 수류탄 충전 신호가 오면 스킬 슬롯 게이지 작동
             UISub->OnGrenadeRegenTriggered.AddDynamic(this, &UAttackStatus::TriggerGrenadeRegenUI);
         }

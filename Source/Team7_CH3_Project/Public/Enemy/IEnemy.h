@@ -25,6 +25,9 @@ class TEAM7_CH3_PROJECT_API IEnemy
 
 public:
 	virtual void BeginPlay() = 0;
+	virtual void LoadData(int StageCount = 0, int WaveCount = 0) = 0;
+
+	virtual bool IsLoaded() = 0;
 
 	virtual FString GetName() const = 0;
 

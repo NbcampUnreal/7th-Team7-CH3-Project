@@ -27,6 +27,9 @@ void AEnemyAIControl::UpdateAct()
     AActor* CurrentTarget = EnemyInterface->GetTarget();
     if (!CurrentTarget) return;
 
+    if (!EnemyInterface->IsLoaded()) return;
+    if (!EnemyInterface->IsAlive()) return;
+
     float Distance = FVector::Dist(GetPawn()->GetActorLocation(), CurrentTarget->GetActorLocation());
     bool bIsRanged = (EnemyInterface->GetAttackType() == EAttackType::Ranged);
     bool bHasLOS = EnemyInterface->HasLineOfSight();

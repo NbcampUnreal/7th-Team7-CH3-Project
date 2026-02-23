@@ -288,6 +288,8 @@ void UWeaponComponent::Fire()
     {
         if (UDevHUISubSystem* UISubSystem = GI->GetSubsystem<UDevHUISubSystem>())
         {
+            // KH 추가 - 260223 : 공격이 발생했음을 알리고 쿨타임 전달
+            UISubSystem->BroadcastNormalAttack(CurrentStat->FireRate);
             // 무기 타입, Ammo 개수 방송
             UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
         }
@@ -305,6 +307,12 @@ void UWeaponComponent::Fire()
 void UWeaponComponent::StartReload()
 {
 	if (bIsReloading || CurrentAmmo >= CurrentStat->MaxAmmo) return;
+
+    // KH 추가 - 260223 :  UI 서브시스템에 재장전 시간 방송
+    if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+    {
+        UISub->BroadcastReload(CurrentStat->ReloadTime);
+    }
 
 	bIsReloading = true;
 	// 장전 사운드 재생
@@ -451,6 +459,13 @@ void UWeaponComponent::LaunchGrenade()
 		UE_LOG(LogTemp, Error, TEXT("Cannot find Row or GrenadeClass is NULL"));
 		return;
 	}
+
+    // KH 추가 - 260223 : 클릭 시 무기 정보 UI만 수류탄으로 먼저 교체
+    if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+    {
+        UISubSystem->BroadcastWeaponStatus(TEXT("Grenade"), CurrentGrenadeCount, Stat->MaxCharges);
+    }
+
 	// 남은 개수 체크 (0개 이하면 발사 안 함)
 	if (CurrentGrenadeCount <= 0)
 	{
@@ -492,6 +507,29 @@ void UWeaponComponent::LaunchGrenade()
 			LastGrenadeTime = CurrentTime;
 			AGrenadeProjectile* Projectile = Cast<AGrenadeProjectile>(SpawnedActor);
 			UE_LOG(LogTemp, Log, TEXT("수류탄 발사 남은 개수: %d / %d"), CurrentGrenadeCount, Stat->MaxCharges);
+
+            // KH 추가 - 260223 : 타이머 체크 블록 바깥으로 빼서 던질 때마다 방송
+            if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+            {
+                // 개수 정보 업데이트
+                UISubSystem->BroadcastWeaponStatus(TEXT("Grenade"), CurrentGrenadeCount, Stat->MaxCharges);
+                // 1초 연사 쿨다운 UI를 먼저 보여줌
+                UISubSystem->BroadcastSkillAttack(Stat->CooldownTime);
+                // 쿨다운(1초)이 끝난 시점에 남은 리젠 시간을 계산해서 UI에 다시 쏨
+                FTimerHandle RestoreHandle;
+                // 1.0f(Stat->CooldownTime) 뒤에 이 람다 함수가 실행
+                GetWorld()->GetTimerManager().SetTimer(RestoreHandle, [this, UISubSystem, Stat]()
+                    {
+                        // 아직 리젠 타이머가 돌고 있다면 (최대치가 아니라면)
+                        if (GetWorld()->GetTimerManager().IsTimerActive(GrenadeRegenTimerHandle))
+                        {
+                            // 현재 시점의 진짜 남은 리젠 시간을 가져와서 UI에 쏨
+                            float CurrentRemaining = GetWorld()->GetTimerManager().GetTimerRemaining(GrenadeRegenTimerHandle);
+                            UISubSystem->BroadcastGrenadeRegen(CurrentRemaining);
+                        }
+                    }, Stat->CooldownTime, false);
+            }
+
 			// 수류탄을 썼으니 충전 타이머 시작
 			if (!GetWorld()->GetTimerManager().IsTimerActive(GrenadeRegenTimerHandle))
 			{
@@ -553,6 +591,19 @@ void UWeaponComponent::RegenerateGrenade()
 	// 개수 증가
 	CurrentGrenadeCount++;
 	UE_LOG(LogTemp, Log, TEXT("수류탄 1개 충전됨 현재 개수 : %d / %d"), CurrentGrenadeCount, Stat->MaxCharges);
+
+    // KH 추가 - 260223 : 아직 최대치가 아니라면 다음 충전 시간 UI 방송
+    if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+    {
+        // 충전된 개수 반영
+        UISub->BroadcastWeaponStatus(TEXT("Grenade"), CurrentGrenadeCount, Stat->MaxCharges);
+
+        // 아직 최대치가 아니라면 다음 수류탄 충전을 위해 리젠 바 다시 시작
+        if (CurrentGrenadeCount < Stat->MaxCharges)
+        {
+            UISub->BroadcastGrenadeRegen(Stat->RegenTime);
+        }
+    }
 
 	// 최대치까지 찼다면 타이머 종료
 	if (CurrentGrenadeCount >= Stat->MaxCharges)

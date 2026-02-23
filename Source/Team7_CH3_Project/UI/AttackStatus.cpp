@@ -15,6 +15,9 @@ void UAttackStatus::NativeConstruct()
             // 서브시스템에서 공격 신호가 오면 내 UI 함수 실행!
             UISub->OnAttackCooldownTriggered.AddDynamic(this, &UAttackStatus::TriggerNormalAttackUI);
             UISub->OnSkillCooldownTriggered.AddDynamic(this, &UAttackStatus::TriggerSkillUI);
+
+            // 수류탄 충전 신호가 오면 스킬 슬롯 게이지 작동
+            UISub->OnGrenadeRegenTriggered.AddDynamic(this, &UAttackStatus::TriggerGrenadeRegenUI);
         }
     }
 
@@ -49,4 +52,14 @@ void UAttackStatus::ResetFeedbackColor()
     // 기본 흰색(원래 컬러)으로 복구
     if (WBP_AttackSlot_Normal) WBP_AttackSlot_Normal->SetFeedbackColor(FLinearColor::White);
     if (WBP_AttackSlot_Skill) WBP_AttackSlot_Skill->SetFeedbackColor(FLinearColor::White);
+}
+
+// 수류탄 충전 신호(30초)를 처리하는 전용 함수
+void UAttackStatus::TriggerGrenadeRegenUI(float Delay)
+{
+    if (WBP_AttackSlot_Skill)
+    {
+        // 30초 리젠 시간 - 프로그레스 바 게이지를 돌리는 데 사용
+        WBP_AttackSlot_Skill->StartDelay(Delay);
+    }
 }

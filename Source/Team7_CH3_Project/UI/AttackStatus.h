@@ -37,4 +37,6 @@ public:
     UFUNCTION()
     void TriggerSkillUI(float Delay);
     void ResetFeedbackColor();
+    UFUNCTION()
+    void TriggerGrenadeRegenUI(float Delay);
 };

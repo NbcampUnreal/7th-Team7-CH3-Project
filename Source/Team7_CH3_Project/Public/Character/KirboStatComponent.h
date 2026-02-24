@@ -49,4 +49,9 @@ public:
 	float GetAttackDamageMultiplier() const { return BaseStat.AttackDamageMultiplier; }
 	float GetDashStaminaCost() const { return BaseStat.DashStaminaCost; }
 	float GetStaminaRecoveryRate() const { return BaseStat.StaminaRecoveryRate; }
+
+public:
+    // KH 260224 추가 : 데미지 텍스트 블루프린트를 할당할 변수
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<class ADamageFloatingText> DamageTextClass;
 };

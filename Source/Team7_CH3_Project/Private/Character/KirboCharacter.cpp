@@ -24,6 +24,7 @@ AKirboCharacter::AKirboCharacter()
 	SpringArmComp->bInheritYaw = false;
 	SpringArmComp->bInheritRoll = false;
 	SpringArmComp->bUsePawnControlRotation = false;
+    SpringArmComp->bDoCollisionTest = false;
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraComp->SetupAttachment(SpringArmComp);

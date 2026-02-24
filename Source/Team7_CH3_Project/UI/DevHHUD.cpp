@@ -2,6 +2,8 @@
 #include "DevHUISubSystem.h"
 #include "DevHGameResultWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Team7_CH3_Project/UI/GameLogTypes.h"
+
 
 void ADevHHUD::BeginPlay()
 {
@@ -57,5 +59,29 @@ void ADevHHUD::HandleGameResult(bool bIsClear)
             ResultWidgetInstance->AddToViewport();
             ResultWidgetInstance->SetupResultUI(bIsClear);
         }
+    }
+}
+
+void ADevHHUD::AddGameLog(FName RowName)
+{
+    // 데이터 테이블 할당 확인
+    if (!LogDataTable)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LogDataTable is NOT assigned in HUD!"));
+        return;
+    }
+
+    // 데이터 테이블에서 RowName에 해당하는 행 찾기
+    static const FString ContextString(TEXT("LogDataLookup"));
+    FLogData* FoundRow = LogDataTable->FindRow<FLogData>(RowName, ContextString);
+
+    if (FoundRow)
+    {
+        // 찾은 데이터를 블루프린트 이벤트 OnReceiveLog로 전달
+        OnReceiveLog(*FoundRow);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Could not find Log Row: %s"), *RowName.ToString());
     }
 }

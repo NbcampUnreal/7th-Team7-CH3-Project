@@ -2,85 +2,98 @@
 
 
 #include "Enemy/EnemyAIControl.h"
-#include "NavigationSystem.h"
+#include "Enemy/IAIBehavior.h"
+#include "Enemy/ICombatEntity.h"
+#include "Enemy/IEntityStats.h"
 #include "Navigation/PathFollowingComponent.h"
-#include "GameFramework/Character.h"
-#include "Kismet/GameplayStatics.h"
-#include "Enemy/IEnemy.h"
-#include "GameFramework/CharacterMovementComponent.h"
 
 void AEnemyAIControl::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
-    EnemyInterface = Cast<IEnemy>(InPawn);
-    if (EnemyInterface)
+
+    AIInterface = Cast<IAIBehavior>(InPawn);
+    CombatInterface = Cast<ICombatEntity>(InPawn);
+    StatsInterface = Cast<IEntityStats>(InPawn);
+
+    if (AIInterface)
     {
-        EnemyInterface->StartChase();
+        AIInterface->StartAct();
         GetWorld()->GetTimerManager().SetTimer(AITimer, this, &AEnemyAIControl::UpdateAct, 0.1f, true);
     }
 }
 
 void AEnemyAIControl::UpdateAct()
 {
-    if (!EnemyInterface) return;
-
-    AActor* CurrentTarget = EnemyInterface->GetTarget();
-    if (!CurrentTarget) return;
-
-    if (!EnemyInterface->IsLoaded()) return;
-    if (!EnemyInterface->IsAlive()) return;
-
-    float Distance = FVector::Dist(GetPawn()->GetActorLocation(), CurrentTarget->GetActorLocation());
-    bool bIsRanged = (EnemyInterface->GetAttackType() == EAttackType::Ranged);
-    bool bHasLOS = EnemyInterface->HasLineOfSight();
-
-    if (bHasLOS && bIsRanged && Distance <= EnemyInterface->GetAttackRange())
+    if (StatsInterface && (!StatsInterface->IsAlive() || !StatsInterface->IsActive()))
     {
-        bIsRepositioning = false;
+        SetState(EEnemyState::Dead);
+        GetWorldTimerManager().ClearTimer(AITimer);
         StopMovement();
-        SetFocus(CurrentTarget);
-        EnemyInterface->TryAttack();
         return;
     }
 
-    if (bIsRepositioning)
+    if (!AIInterface || !CombatInterface) return;
+
+    AActor* Target = AIInterface->GetTarget();
+    if (!Target)
     {
-        if (GetPathFollowingComponent() && GetPathFollowingComponent()->GetStatus() == EPathFollowingStatus::Moving)
-        {
-            return;
-        }
-        bIsRepositioning = false;
+        SetState(EEnemyState::Idle);
+        return;
     }
 
-    if (!bIsRanged && Distance <= EnemyInterface->GetAttackRange())
+    bool bIsWaiting = CombatInterface->IsAttackReady();
+
+    if (!bIsWaiting)
+    {
+        SetState(EEnemyState::Waiting);
+        HandleWaiting(Target);
+    }
+    else
+    {
+        float Distance = GetPawn()->GetDistanceTo(Target);
+        float Range = CombatInterface->GetAttackRange();
+        bool bHasLOS = AIInterface->HasLineOfSight();
+
+        if (Distance <= Range && bHasLOS)
+        {
+            SetState(EEnemyState::Attacking);
+            HandleAttacking(Target);
+        }
+        else
+        {
+            SetState(EEnemyState::Chasing);
+            HandleChasing(Target);
+        }
+    }
+}
+
+void AEnemyAIControl::HandleChasing(AActor* Target)
+{
+    ClearFocus(EAIFocusPriority::Gameplay);
+
+    float Acceptance = 25.0f;
+    MoveToActor(Target, Acceptance);
+}
+
+void AEnemyAIControl::HandleAttacking(AActor* Target)
+{
+    SetFocus(Target);
+
+    if (CombatInterface->IsAttackReady())
     {
         StopMovement();
-        SetFocus(CurrentTarget);
-        EnemyInterface->TryAttack();
-        return; 
+        CombatInterface->TryAttack();
     }
-    if (bIsRanged && Distance <= EnemyInterface->GetAttackRange() && !bHasLOS)
-    {
-        UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-        if (NavSys)
-        {
-            FVector StrafeDirection = GetPawn()->GetActorRightVector();
-            
-            FVector GoalPoint = GetPawn()->GetActorLocation() + (StrafeDirection * 250.f);
-            
-            FNavLocation ProjectedLocation;
-            if (NavSys->ProjectPointToNavigation(GoalPoint, ProjectedLocation))
-            {
-                bIsRepositioning = true;
-                MoveToLocation(ProjectedLocation.Location, 50.f);
-                return;
-            }
-        }
-    }
-    
-    if (!EnemyInterface->IsAttackReady()) return;
+}
 
-    bIsRepositioning = false;
+void AEnemyAIControl::HandleWaiting(AActor* Target)
+{
     ClearFocus(EAIFocusPriority::Gameplay);
-    MoveToActor(CurrentTarget);
+    StopMovement();
+}
+
+void AEnemyAIControl::SetState(EEnemyState NewState)
+{
+    if (CurrentState == NewState) return;
+    CurrentState = NewState;
 }

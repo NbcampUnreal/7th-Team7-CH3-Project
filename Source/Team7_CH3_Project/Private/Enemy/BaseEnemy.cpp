@@ -4,26 +4,43 @@
 #include "Enemy/BaseEnemy.h"
 #include "Enemy/EnemyData.h"
 #include "Enemy/EnemyAIControl.h"
+#include "Enemy/EnemyProjectile.h"
+#include "Enemy/EnemyObjectData.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Team7_CH3_Project/UI/EnemyHealthBarComponent.h"
 
 ABaseEnemy::ABaseEnemy()
 {
     PrimaryActorTick.bCanEverTick = false;
+    Tags.Add(FName("Enemy"));
+
+    HealthBarComp = CreateDefaultSubobject<UEnemyHealthBarComponent>(TEXT("HealthBarComp"));
+    HealthBarComp->SetupAttachment(RootComponent);
 }
 
 void ABaseEnemy::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (bTestInitialize)
+    {
+        LoadData();
+    }
 }
 
-void ABaseEnemy::LoadData(int StageCount, int WaveCount)
+// =========================================================================
+// IEntityStats Implementation
+// =========================================================================
+
+void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
 {
     if (!DataTable) return;
 
     static const FString ContextString(TEXT("Enemy Data Context"));
-    FEnemyData* EnemyData = DataTable->FindRow<FEnemyData>(*Name, ContextString);
+    FEnemyData* EnemyData = DataTable->FindRow<FEnemyData>(*EnemyName, ContextString);
 
     if (EnemyData)
     {
@@ -32,32 +49,125 @@ void ABaseEnemy::LoadData(int StageCount, int WaveCount)
         DamageIncStage = EnemyData->StageDamageInc;
         DamageIncWave = EnemyData->WaveDamageInc;
 
-        EnemyType = EnemyData->AttackType;
+        HealthMax = EnemyData->HealthMax * (1 + (HealthIncStage * StageCount) + (HealthIncWave * WaveCount));
+        Health = HealthMax;
         Defence = EnemyData->Defence;
-        Movespeed = EnemyData->Movespeed;
-        MovespeedAct = EnemyData->MovespeedAct;
+        Damage = EnemyData->Damage * (1 + (DamageIncStage * StageCount) + (DamageIncWave * WaveCount));
+
+        EnemyType = EnemyData->AttackType;
         AttackRange = EnemyData->AttackRange;
         AttackCooldown = EnemyData->AttackCooldown;
-        AttackAngle = EnemyData->MeleeAttackAngle;
-        ProjectileSpeed = EnemyData->RangeProjectileSpeed;
-        ActionRange = EnemyData->ActionRange;
-        ActionCooldown = EnemyData->ActionCooldown;
-        GoldDrop = EnemyData->GoldDrop;
-        ScoreDrop = EnemyData->ScoreDrop;
-        itemChance = EnemyData->ItemDropChance;
 
+        MeleeAttackAngle = EnemyData->MeleeAttackAngle;
+        RangeProjectileSpeed = EnemyData->RangeProjectileSpeed;
+
+        Movespeed = EnemyData->Movespeed;
         GetCharacterMovement()->MaxWalkSpeed = Movespeed;
 
-        float HealthCount = EnemyData->HealthMax + (EnemyData->HealthMax * ((StageCount * HealthIncStage) + (WaveCount * HealthIncWave)));
-        float DamageCount = EnemyData->Damage + (EnemyData->Damage * ((StageCount * DamageIncStage) + (WaveCount * DamageIncWave)));
+        bIsAlive = true;
 
-        HealthMax = HealthCount;
-        Health = HealthCount;
-        Damage = DamageCount;
+        ProjectileObj = EnemyData->ProjectileObj;
     }
 
-    bIsLoaded = true;
-    StartChase();
+    if (bInitializeOnLoad)
+    {
+        StartAct();
+    }
+}
+
+void ABaseEnemy::TakeDamage(float DamageAmount)
+{
+    if (!bIsAlive) return;
+
+    Health -= DamageAmount * (100.0f / (100.0f + Defence));
+
+    if (HealthBarComp)
+    {
+        HealthBarComp->ShowAndUpdateHP(Health, HealthMax);
+    }
+
+    if (Health <= 0)
+    {
+        Die();
+    }
+}
+
+void ABaseEnemy::Die()
+{
+    if (!bIsAlive) return;
+    bIsAlive = false;
+
+    if (AEnemyAIControl* AICont = Cast<AEnemyAIControl>(GetController()))
+    {
+        AICont->StopMovement();
+        AICont->UnPossess();
+    }
+
+    GetWorldTimerManager().ClearAllTimersForObject(this);
+    bIsAttackReady = false;
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    if (HealthBarComp)
+    {
+        HealthBarComp->SetVisibility(false);
+
+        if (GetWorld())
+        {
+            GetWorld()->GetTimerManager().ClearAllTimersForObject(HealthBarComp);
+        }
+    }
+
+    if (DeathMontages.Num() > 0)
+    {
+        int32 RandomIdx = FMath::RandRange(0, DeathMontages.Num() - 1);
+        PlayAnimMontage(DeathMontages[RandomIdx]);
+    }
+    else
+    {
+        Destroy();
+    }
+
+    SetLifeSpan(10.0f);
+}
+
+// =========================================================================
+// ICombatEntity Implementation
+// =========================================================================
+
+void ABaseEnemy::TryAttack()
+{
+    if (bIsAttackReady && bIsAlive)
+    {
+        bIsAttackReady = false;
+        ExecuteAttackAnimation();
+
+        FTimerHandle TimerHandle_AttackReset;
+        GetWorldTimerManager().SetTimer(TimerHandle_AttackReset, [this]() {
+            bIsAttackReady = true;
+            }, AttackCooldown, false);
+    }
+}
+
+void ABaseEnemy::ExecuteAction(int32 ActionID)
+{
+    ExecuteActionAnimation();
+}
+
+// =========================================================================
+// IAIBehavior Implementation
+// =========================================================================
+
+void ABaseEnemy::StartAct()
+{
+    bIsActive = true;
+    GetCharacterMovement()->MaxWalkSpeed = Movespeed;
+}
+
+AActor* ABaseEnemy::GetTarget() const
+{
+    return UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
 }
 
 bool ABaseEnemy::HasLineOfSight() const
@@ -68,175 +178,60 @@ bool ABaseEnemy::HasLineOfSight() const
     FHitResult Hit;
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
-    Params.AddIgnoredActor(Target);
 
-    FVector Start = GetActorLocation() + FVector(0, 0, 60.f); 
-    FVector End = Target->GetActorLocation();
-
-    bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
-    
-    return !bHit; 
+    return !GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation() + FVector(0, 0, 50), Target->GetActorLocation(), ECC_Visibility, Params);
 }
 
-AActor* ABaseEnemy::GetTarget() const
+// =========================================================================
+// Animation Execution (Internal)
+// =========================================================================
+
+void ABaseEnemy::ExecuteAttackAnimation()
 {
-    return UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-}
-
-void ABaseEnemy::StartChase()
-{
-    ResetMovespeed();
-}
-
-void ABaseEnemy::TryAttack()
-{
-    if (!IsAttackReady() || !AttackMontage) return;
-
-    bIsAttackReady = false;
-
-    GetWorldTimerManager().SetTimer(AttackTimers, this, &ABaseEnemy::ResetAttackCooldown, AttackCooldown, false);
-
-    ExecuteAttackAnimation();
-}
-
-void ABaseEnemy::TryAction()
-{
-    if (!IsActionReady()) return;
-
-    bIsActionReady = false;
-    GetCharacterMovement()->MaxWalkSpeed = MovespeedAct;
-    
-    if (GEngine)
+    if (AttackMontage)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 1.5f, FColor::Blue, TEXT("Enemy Actioned!"));
-    }
-    // Special action performed here - empty now
-
-    if (ActionCooldown > 0) {
-        GetWorldTimerManager().SetTimer(ActionTimers, this, &ABaseEnemy::ResetActionCooldown, ActionCooldown, false);
-        ResetMovespeed();
+        PlayAnimMontage(AttackMontage);
     }
 }
 
-void ABaseEnemy::TakeDamage(float DamageAmount)
+void ABaseEnemy::ExecuteActionAnimation()
 {
-    Health -= DamageAmount * (100 / (100 + Defence));
-    if (Health <= 0.f)
-    {
-        Die();
-    }
+    // No action for base enemy.
 }
 
 void ABaseEnemy::ExecuteAttackPoint()
 {
-    if (!EnemyObjectData) return;
-
-    if (EnemyType == EAttackType::Melee)
-    {
-        FVector Center = GetActorLocation();
-        float Radius = AttackRange;
-        float HalfAngleDegree = AttackAngle;
-
-        TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-        ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
-
-        TArray<AActor*> IgnoreActors;
-        IgnoreActors.Add(this);
-
-        TArray<AActor*> OutActors;
-        UKismetSystemLibrary::SphereOverlapActors(
-            GetWorld(),
-            Center,
-            Radius,
-            ObjectTypes,
-            nullptr,
-            IgnoreActors,
-            OutActors
-        );
-
-        FVector Forward = GetActorForwardVector();
-
-        for (AActor* HitActor : OutActors)
-        {
-            FVector DirToTarget = (HitActor->GetActorLocation() - Center).GetSafeNormal();
-            float DotProduct = FVector::DotProduct(Forward, DirToTarget);
-            float CosAngle = FMath::Cos(FMath::DegreesToRadians(HalfAngleDegree));
-
-            if (DotProduct >= CosAngle)
-            {
-                UGameplayStatics::ApplyDamage(
-                    HitActor,
-                    Damage,
-                    GetController(),
-                    this,
-                    UDamageType::StaticClass()
-                );
-            }
-        }
-    }
-    else if (EnemyType == EAttackType::Ranged && EnemyObjectData->BulletObj)
+    if (EnemyType == EAttackType::Ranged && ProjectileObj)
     {
         FVector SpawnLocation = GetMesh()->GetSocketLocation(MuzzleName);
-
         FVector TargetLocation = GetTarget()->GetActorLocation();
         TargetLocation.Z = SpawnLocation.Z;
         FRotator FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
+        FRotator SpawnRotation = GetMesh()->GetSocketRotation(MuzzleName);
 
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.Owner = this;
-
-        AEnemyProjectile* Bullet = GetWorld()->SpawnActorDeferred<AEnemyProjectile>(
-            EnemyObjectData->BulletObj, FTransform(FireRotation, SpawnLocation));
-
+        AEnemyProjectile* Bullet = GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileObj, SpawnLocation, FireRotation);
         if (Bullet)
         {
-            Bullet->InitializeProjectile(ProjectileSpeed, Damage, AttackRange * 1.5f);
+            Bullet->InitializeProjectile(RangeProjectileSpeed, Damage, AttackRange * 1.5f);
             Bullet->FinishSpawning(FTransform(FireRotation, SpawnLocation));
         }
     }
-}
-
-void ABaseEnemy::ExecuteAttackAnimation()
-{
-    PlayAnimMontage(AttackMontage);
-}
-void ABaseEnemy::ExecuteActionAnimation()
-{
-    PlayAnimMontage(ActionMontage);
-}
-
-void ABaseEnemy::Die()
-{
-    if (DeathMontages.Num() == 0)
+    else if (EnemyType == EAttackType::Melee)
     {
-        Destroy();
-        return;
+        AActor* Target = GetTarget();
+        if (Target && GetDistanceTo(Target) <= AttackRange)
+        {
+            FVector Forward = GetActorForwardVector();
+            FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+            float DotProduct = FVector::DotProduct(Forward, ToTarget);
+
+            float AngleThreshold = FMath::Cos(FMath::DegreesToRadians(MeleeAttackAngle * 0.5f));
+
+            if (DotProduct >= AngleThreshold)
+            {
+                UGameplayStatics::ApplyDamage(Target, Damage, GetController(), this, UDamageType::StaticClass());
+            }
+        }
     }
-
-    if (AEnemyAIControl* AICont = Cast<AEnemyAIControl>(GetController()))
-    {
-        AICont->StopMovement();
-        AICont->UnPossess();
-        AICont->Destroy();
-    }
-
-    GetWorldTimerManager().ClearAllTimersForObject(this);
-
-    bIsAttackReady = false;
-    bIsActionReady = false;
-
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
-
-    if (DeathMontages.Num() > 0)
-    {
-        int32 RandomIdx = FMath::RandRange(0, DeathMontages.Num() - 1);
-        PlayAnimMontage(DeathMontages[RandomIdx]);
-    }
-
-    bIsAlive = false;
-
-    // Gold - Score get on game managing state
-
-    SetLifeSpan(10.0f);
 }

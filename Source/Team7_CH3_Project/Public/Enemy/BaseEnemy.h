@@ -2,15 +2,18 @@
 
 #pragma once
 
-#include "IEnemy.h"
-#include "Enemy/EnemyProjectile.h"
-#include "Enemy/EnemyObjectData.h"
+#include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Enemy/EnemyData.h"
+#include "Enemy/IEntityStats.h"
+#include "Enemy/ICombatEntity.h"
+#include "Enemy/IAIBehavior.h"
 #include "BaseEnemy.generated.h"
 
+class UEnemyHealthBarComponent;
+
 UCLASS()
-class TEAM7_CH3_PROJECT_API ABaseEnemy : public ACharacter, public IEnemy
+class TEAM7_CH3_PROJECT_API ABaseEnemy : public ACharacter, public IEntityStats, public ICombatEntity, public IAIBehavior
 {
 	GENERATED_BODY()
 
@@ -18,120 +21,136 @@ public:
     ABaseEnemy();
 
 protected:
+    // =========================================================================
+    // INITIALIZATION
+    // =========================================================================
     UPROPERTY(EditAnywhere, Category = "Enemy")
+    bool bTestInitialize = false;
+    UPROPERTY(EditAnywhere, Category = "Enemy")
+    bool bInitializeOnLoad = true;
+
+    virtual void BeginPlay() override;
+    // =========================================================================
+    // DATA & ASSETS
+    // =========================================================================
+
+    UPROPERTY(EditAnywhere, Category = "Enemy|Data")
     UDataTable* DataTable;
-    UPROPERTY(EditAnywhere, Category = "Enemy")
-    UEnemyObjectData* EnemyObjectData;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
-    FString Name = "BaseEnemy";
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Enemy")
+
+    UPROPERTY(EditAnywhere, Category = "Enemy|Data")
+    class UEnemyObjectData* EnemyObjectData;
+
+    UPROPERTY(EditAnywhere, Category = "Enemy|Data")
+    FString EnemyName = "BaseEnemy";
+
+    // =========================================================================
+    // CORE STATS (IEntityStats)
+    // =========================================================================
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Enemy|Stats")
+    float Health;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Enemy|Stats")
+    float HealthMax;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Enemy|Stats")
+    float Defence;
+
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Stats")
+    bool bIsAlive = true;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Stats")
+    bool bIsActive = true;
+
+    // Scaling Factors (Kept for LoadData logic)
+    float HealthIncStage;
+    float HealthIncWave;
+    float DamageIncStage;
+    float DamageIncWave;
+
+    // =========================================================================
+    // COMBAT (ICombatEntity)
+    // =========================================================================
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat")
     EAttackType EnemyType = EAttackType::Melee;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    FName MuzzleName = "Muzzle_Front";
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    class UAnimMontage* AttackMontage;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    class UAnimMontage* ActionMontage;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animations")
-    TArray<UAnimMontage*> DeathMontages;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat")
+    float Damage;
 
-    UPROPERTY()
-    float HealthIncStage = 0.2f;
-    UPROPERTY()
-    float HealthIncWave = 0.05f;
-    UPROPERTY()
-    float DamageIncStage = 0.15f;
-    UPROPERTY()
-    float DamageIncWave = 0.03f;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat")
+    float AttackRange;
 
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Status")
-    float Health = 100.f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Status")
-    float HealthMax = 100.f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Status")
-    float Defence = 5.f;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat")
+    float AttackCooldown;
 
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Movement")
-    float Movespeed = 375.f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Movement")
-    float MovespeedAct = 250.f;
-    
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack")
-    float Damage = 10.f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack")
-    float AttackRange = 100.f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack")
-    float AttackCooldown = 1.5f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack|Melee")
-    float AttackAngle = 85.f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Attack|Ranged")
-    float ProjectileSpeed = 750.f;
-
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Action")
-    float ActionRange = 1200.f;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Action")
-    float ActionCooldown = 5.f;
-    
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Reward")
-    int GoldDrop = 20;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Reward")
-    int ScoreDrop = 20;
-    UPROPERTY(VisibleAnywhere, Category = "Enemy|Reward")
-    float itemChance = 0.2f;
-    
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat")
     bool bIsAttackReady = true;
-    bool bIsActionReady = true;
-    FTimerHandle AttackTimers;
-    FTimerHandle ActionTimers;
-    
-    void ResetAttackCooldown() { bIsAttackReady = true; }
-    void ResetActionCooldown() { bIsActionReady = true; }
-    void ResetMovespeed() { GetCharacterMovement()->MaxWalkSpeed = Movespeed; }
 
-    bool bIsLoaded = false;
-    bool bIsAlive = true;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat|Melee")
+    float MeleeAttackAngle;
+
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat|Range")
+    float RangeProjectileSpeed;
+
+    // =========================================================================
+    // MOVEMENT & AI (IAIBehavior)
+    // =========================================================================
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Movement")
+    float Movespeed;
+
+    // =========================================================================
+    // ASSETS & ANIMATIONS
+    // =========================================================================
+    UPROPERTY(EditAnywhere, Category = "Enemy|Assets")
+    class UAnimMontage* AttackMontage;
+
+    // No action for base enemy.
+    //UPROPERTY(EditAnywhere, Category = "Enemy|Assets")
+    //class UAnimMontage* ActionMontage;
+
+    UPROPERTY(EditAnywhere, Category = "Enemy|Assets")
+    TArray<class UAnimMontage*> DeathMontages;
+
+    UPROPERTY(EditAnywhere, Category = "Enemy|Assets")
+    FName MuzzleName = "Muzzle_Front";
+
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets")
+    TSubclassOf<class AEnemyProjectile> ProjectileObj;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
+    UEnemyHealthBarComponent* HealthBarComp;
+
 
 public:
-    virtual void BeginPlay() override;
-    virtual void LoadData(int StageCount = 0, int WaveCount = 0) override;
-
-    virtual bool IsLoaded() override { return bIsLoaded; }
-
-    virtual FString GetName() const override { return Name; }
-
-    virtual EAttackType GetAttackType() const override { return EnemyType; }
-    virtual bool HasLineOfSight() const override;
-
-    virtual void StartChase() override;
-
-    virtual void TryAttack() override;
-    virtual void TryAction() override;
-
-    virtual float GetDamage() const override { return Damage; }
-
-    virtual float GetHealth() override { return Health; }
-    virtual float GetHealthMax() override { return HealthMax; }
-    virtual float GetHealthPercent() override { return Health / HealthMax; }
-
+    // --- IEntityStats Implementation ---
+    virtual void LoadData(int32 StageCount = 0, int32 WaveCount = 0) override;
+    virtual float GetHealth() const override { return Health; }
+    virtual float GetHealthMax() const override { return HealthMax; }
+    virtual float GetHealthPercent() const override { return (HealthMax > 0.0f) ? (Health / HealthMax) : 0.0f; }
+    virtual bool IsActive() const override { return bIsActive; }
     virtual void TakeDamage(float DamageAmount) override;
+    virtual bool IsAlive() const override { return bIsAlive; }
+    virtual void Die() override;
 
-    UFUNCTION(BlueprintCallable, Category = "Enemy/AttackRelated")
+    // --- ICombatEntity Implementation ---
+    virtual EAttackType GetAttackType() const override { return EnemyType; }
+    virtual float GetDamage() const override { return Damage; }
+    virtual void TryAttack() override;
+    virtual bool IsAttackReady() const override { return bIsAttackReady; }
+    virtual float GetAttackRange() const override { return AttackRange; }
+    virtual float GetAttackCooldown() const override { return AttackCooldown; }
+    virtual void ExecuteAction(int32 ActionID) override;
+
+    // --- IAIBehavior Implementation ---
+    virtual void StartAct() override;
+    virtual AActor* GetTarget() const override;
+    virtual bool HasLineOfSight() const override;
+    virtual float GetMovespeed() const override { return Movespeed; }
+
+    // --- Internal calls ---
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
     void ExecuteAttackPoint();
+
+protected:
+    // --- Internal calls ---
     void ExecuteAttackAnimation();
     void ExecuteActionAnimation();
-
-    virtual float GetAttackRange() const override { return AttackRange; }
-    virtual float GetActionRange() const override { return ActionRange; }
-    virtual bool IsAttackReady() const override { return bIsAttackReady; }
-    virtual bool IsActionReady() const override { return bIsActionReady; }
-
-    virtual float GetMovespeed() const override { return Movespeed; }
-    virtual AActor* GetTarget() const override;
-
-    virtual int GetGoldDrop() const override { return GoldDrop; }
-    virtual float GetItemChance() const override { return itemChance; }
-
-    virtual void Die() override;
-    virtual bool IsAlive() const override { return bIsAlive; }
 };

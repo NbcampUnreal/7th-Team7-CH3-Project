@@ -26,9 +26,10 @@ protected:
     void HandleGameResult(bool bIsClear); // 실제 결과 UI 띄우는 내부 함수
 
 private:
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, Category = "UI | Instances", meta = (AllowPrivateAccess = "true"))
     UUserWidget* MainHUDInstance; // HUD 인스턴스
-    UPROPERTY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "UI | Instances", meta = (AllowPrivateAccess = "true"))
     class UDevHGameResultWidget* ResultWidgetInstance; // 생성된 결과 위젯 저장, 중복 생성 방지
 
 public:
@@ -38,4 +39,16 @@ public:
 private:
     UPROPERTY()
     UDevHCrosshairWidget* CrosshairInstance;
+
+
+// 로그 UI
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Log")
+    UDataTable* LogDataTable; // 데이터 테이블 에셋 에디터에 할당
+   
+    UFUNCTION(BlueprintImplementableEvent, Category = "Log")
+    void OnReceiveLog(const FLogData& Data); // WBP_Log에서 이 이벤트를 구현하여 로그를 화면에 표시
+
+    UFUNCTION(BlueprintCallable, Category = "Log")
+    void AddGameLog(FName RowName); // 외부에서 호출할 함수
 };

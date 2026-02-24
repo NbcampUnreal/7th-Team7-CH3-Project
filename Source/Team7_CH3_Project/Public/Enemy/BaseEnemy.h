@@ -84,11 +84,18 @@ protected:
     UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat")
     bool bIsAttackReady = true;
 
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat")
+    float ZDifferenceAllowed;
+
     UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat|Melee")
     float MeleeAttackAngle;
 
     UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat|Range")
     float RangeProjectileSpeed;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat|Range")
+    float RangeProjectileGravity;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat|Range")
+    float RangeProjectileAOE;
 
     // =========================================================================
     // MOVEMENT & AI (IAIBehavior)
@@ -137,6 +144,7 @@ public:
     virtual bool IsAttackReady() const override { return bIsAttackReady; }
     virtual float GetAttackRange() const override { return AttackRange; }
     virtual float GetAttackCooldown() const override { return AttackCooldown; }
+    virtual float GetZDifferenceAllowed() const override { return ZDifferenceAllowed; }
     virtual void ExecuteAction(int32 ActionID) override;
 
     // --- IAIBehavior Implementation ---

@@ -57,9 +57,12 @@ void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
         EnemyType = EnemyData->AttackType;
         AttackRange = EnemyData->AttackRange;
         AttackCooldown = EnemyData->AttackCooldown;
+        ZDifferenceAllowed = EnemyData->ZDifferenceAllowed;
 
         MeleeAttackAngle = EnemyData->MeleeAttackAngle;
         RangeProjectileSpeed = EnemyData->RangeProjectileSpeed;
+        RangeProjectileGravity = EnemyData->RangeProjectileGravity;
+        RangeProjectileAOE = EnemyData->RangeProjectileAOE;
 
         Movespeed = EnemyData->Movespeed;
         GetCharacterMovement()->MaxWalkSpeed = Movespeed;
@@ -179,7 +182,21 @@ bool ABaseEnemy::HasLineOfSight() const
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
 
-    return !GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation() + FVector(0, 0, 50), Target->GetActorLocation(), ECC_Visibility, Params);
+    TArray<AActor*> AllEnemies;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Enemy"), AllEnemies);
+    Params.AddIgnoredActors(AllEnemies);
+
+    FVector StartLocation = GetActorLocation() + FVector(0, 0, 60.f);
+    FVector EndLocation = Target->GetActorLocation();
+
+    bool bHitSomething = GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, ECC_Visibility, Params);
+
+    if (!bHitSomething || (Hit.GetActor() == Target))
+    {
+        return true;
+    }
+
+    return false;
 }
 
 // =========================================================================
@@ -203,17 +220,77 @@ void ABaseEnemy::ExecuteAttackPoint()
 {
     if (EnemyType == EAttackType::Ranged && ProjectileObj)
     {
-        FVector SpawnLocation = GetMesh()->GetSocketLocation(MuzzleName);
-        FVector TargetLocation = GetTarget()->GetActorLocation();
-        TargetLocation.Z = SpawnLocation.Z;
-        FRotator FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
-        FRotator SpawnRotation = GetMesh()->GetSocketRotation(MuzzleName);
+        AActor* Target = GetTarget();
+        if (!Target) return;
 
-        AEnemyProjectile* Bullet = GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileObj, SpawnLocation, FireRotation);
+        FVector SpawnLocation = GetMesh()->GetSocketLocation(MuzzleName);
+        FVector TargetLocation = Target->GetActorLocation();
+
+        float TargetHalfHeight = 0.0f;
+        ACharacter* TargetChar = Cast<ACharacter>(Target);
+        if (TargetChar && TargetChar->GetCapsuleComponent())
+        {
+            TargetHalfHeight = TargetChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        }
+
+        if (RangeProjectileGravity <= 0.0f)
+        {
+            TargetLocation.Z = SpawnLocation.Z;
+        }
+        else
+        {
+            TargetLocation.Z -= TargetHalfHeight;
+            if (RangeProjectileAOE > 0.0f)
+            {
+                float RandomOffset = RangeProjectileAOE * 0.3f;
+                TargetLocation.X += FMath::FRandRange(-RandomOffset, RandomOffset);
+                TargetLocation.Y += FMath::FRandRange(-RandomOffset, RandomOffset);
+            }
+        }
+
+        FRotator FireRotation;
+        float FinalGravityScale = RangeProjectileGravity;
+
+        if (RangeProjectileGravity > 0.0f)
+        {
+            FVector OutLaunchVelocity;
+            bool bHaveSolution = false;
+
+            for (int32 i = 0; i < 5; i++)
+            {
+                float CustomGravityZ = GetWorld()->GetGravityZ() * FinalGravityScale;
+
+                bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(this, OutLaunchVelocity, SpawnLocation, TargetLocation, RangeProjectileSpeed, false, 0.0f, CustomGravityZ, ESuggestProjVelocityTraceOption::DoNotTrace);
+
+                if (bHaveSolution) break;
+
+                FinalGravityScale *= 0.75f;
+            }
+
+            if (bHaveSolution)
+            {
+                FireRotation = OutLaunchVelocity.Rotation();
+            }
+            else
+            {
+                FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
+            }
+        }
+        else
+        {
+            FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
+            FinalGravityScale = 0.0f;
+        }
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Owner = this;
+        SpawnParams.Instigator = GetInstigator();
+
+        AEnemyProjectile* Bullet = GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileObj, SpawnLocation, FireRotation, SpawnParams);
         if (Bullet)
         {
-            Bullet->InitializeProjectile(RangeProjectileSpeed, Damage, AttackRange * 1.5f);
-            Bullet->FinishSpawning(FTransform(FireRotation, SpawnLocation));
+            float LifeRange = (FinalGravityScale > 0.0f) ? (AttackRange * 8.0f) : (AttackRange * 1.5f);
+            Bullet->InitializeProjectile(RangeProjectileSpeed, Damage, LifeRange, FinalGravityScale, RangeProjectileAOE);
         }
     }
     else if (EnemyType == EAttackType::Melee)
@@ -223,9 +300,7 @@ void ABaseEnemy::ExecuteAttackPoint()
         {
             FVector Forward = GetActorForwardVector();
             FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-
             float DotProduct = FVector::DotProduct(Forward, ToTarget);
-
             float AngleThreshold = FMath::Cos(FMath::DegreesToRadians(MeleeAttackAngle * 0.5f));
 
             if (DotProduct >= AngleThreshold)

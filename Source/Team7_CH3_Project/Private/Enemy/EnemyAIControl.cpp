@@ -41,9 +41,9 @@ void AEnemyAIControl::UpdateAct()
         return;
     }
 
-    bool bIsWaiting = CombatInterface->IsAttackReady();
+    bool bIsReady = CombatInterface->IsAttackReady();
 
-    if (!bIsWaiting)
+    if (!bIsReady)
     {
         SetState(EEnemyState::Waiting);
         HandleWaiting(Target);
@@ -54,7 +54,10 @@ void AEnemyAIControl::UpdateAct()
         float Range = CombatInterface->GetAttackRange();
         bool bHasLOS = AIInterface->HasLineOfSight();
 
-        if (Distance <= Range && bHasLOS)
+        float CurrentZDiff = FMath::Abs(Target->GetActorLocation().Z - GetPawn()->GetActorLocation().Z);
+        float AllowedZ = CombatInterface->GetZDifferenceAllowed();
+
+        if (Distance <= Range && bHasLOS && CurrentZDiff <= AllowedZ)
         {
             SetState(EEnemyState::Attacking);
             HandleAttacking(Target);
@@ -69,10 +72,56 @@ void AEnemyAIControl::UpdateAct()
 
 void AEnemyAIControl::HandleChasing(AActor* Target)
 {
-    ClearFocus(EAIFocusPriority::Gameplay);
+    if (!Target || !CombatInterface) return;
 
-    float Acceptance = 25.0f;
-    MoveToActor(Target, Acceptance);
+    float Range = CombatInterface->GetAttackRange();
+    float AllowedZ = CombatInterface->GetZDifferenceAllowed();
+    float CurrentZDiff = FMath::Abs(Target->GetActorLocation().Z - GetPawn()->GetActorLocation().Z);
+
+    if (CurrentZDiff > AllowedZ)
+    {
+        MoveToActor(Target, 0.0f);
+        return;
+    }
+
+    bool bHasLOS = AIInterface->HasLineOfSight();
+    if (CombatInterface->GetAttackType() == EAttackType::Ranged && !bHasLOS)
+    {
+        FVector EnemyLoc = GetPawn()->GetActorLocation();
+        FVector PlayerLoc = Target->GetActorLocation();
+        FVector DirToEnemy = (EnemyLoc - PlayerLoc).GetSafeNormal2D();
+
+        for (int32 i = 1; i <= 72; i++)
+        {
+            float AngleOffset = i * 2.5f;
+            float AnglesToTry[] = { AngleOffset, -AngleOffset };
+
+            for (float CurrentAngle : AnglesToTry)
+            {
+                FVector TestDir = DirToEnemy.RotateAngleAxis(CurrentAngle, FVector::UpVector);
+                FVector TestPoint = PlayerLoc + (TestDir * (Range - 100.0f));
+
+                FCollisionQueryParams Params;
+                Params.AddIgnoredActor(GetPawn());
+
+                if (!GetWorld()->LineTraceTestByChannel(
+                    TestPoint + FVector(0, 0, 60.f),
+                    PlayerLoc + FVector(0, 0, 60.f),
+                    ECC_Visibility, Params))
+                {
+                    float BufferAngle = (CurrentAngle > 0) ? (CurrentAngle + 7.5f) : (CurrentAngle - 7.5f);
+
+                    FVector BufferedDir = DirToEnemy.RotateAngleAxis(BufferAngle, FVector::UpVector);
+                    FVector FinalPoint = PlayerLoc + (BufferedDir * (Range - 100.0f));
+
+                    MoveToLocation(FinalPoint, 5.0f);
+                    return;
+                }
+            }
+        }
+    }
+
+    MoveToActor(Target, 25.0f);
 }
 
 void AEnemyAIControl::HandleAttacking(AActor* Target)

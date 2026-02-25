@@ -11,6 +11,7 @@
 #include "BaseEnemy.generated.h"
 
 class UEnemyHealthBarComponent;
+class ADamageFloatingText;
 
 UCLASS()
 class TEAM7_CH3_PROJECT_API ABaseEnemy : public ACharacter, public IEntityStats, public ICombatEntity, public IAIBehavior
@@ -129,8 +130,8 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
     UEnemyHealthBarComponent* HealthBarComp;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat")
-    class UKirboStatComponent* StatComp;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|UI")
+    TSubclassOf<ADamageFloatingText> DamageTextClass;
 
 public:
     // --- IEntityStats Implementation ---

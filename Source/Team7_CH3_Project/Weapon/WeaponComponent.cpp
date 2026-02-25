@@ -9,7 +9,7 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "GrenadeProjectile.h"
 #include "GrenadeStat.h"
-#include "Enemy/IEnemy.h"
+#include "Enemy/IEntityStats.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
 #include "Team7_CH3_Project/UI/DevHHUD.h" // KH 추가 : UI
 #include "Team7_CH3_Project/UI/DevHCrosshairWidget.h" // KH 추가 : UI
@@ -599,7 +599,7 @@ void UWeaponComponent::ProcessHit(const FHitResult& Hit)
 	if (CurrentStat->ImpactEffect) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), CurrentStat->ImpactEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
 
 	// 데미지 적용 및 UI 피드백 (인터페이스 활용)
-	if (IEnemy* Enemy = Cast<IEnemy>(HitActor))
+	if (IEntityStats* Enemy = Cast<IEntityStats>(HitActor))
 	{
 		Enemy->TakeDamage(CurrentStat->Damage);
 		UE_LOG(LogTemp, Log, TEXT("몬스터 타격 Damage : %f"), CurrentStat->Damage);

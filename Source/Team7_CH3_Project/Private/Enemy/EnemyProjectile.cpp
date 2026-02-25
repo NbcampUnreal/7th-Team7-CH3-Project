@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Character/KirboCharacter.h"
 
 AEnemyProjectile::AEnemyProjectile()
@@ -37,6 +38,8 @@ AEnemyProjectile::AEnemyProjectile()
 void AEnemyProjectile::BeginPlay()
 {
     Super::BeginPlay();
+    Tags.Add(FName("EnemyProjectile"));
+
     SpawnLocation = GetActorLocation();
     CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &AEnemyProjectile::OnProjectileOverlap);
     CollisionComponent->SetNotifyRigidBodyCollision(true);
@@ -50,6 +53,14 @@ void AEnemyProjectile::Tick(float DeltaTime)
     {
         Destroy();
     }
+}
+
+void AEnemyProjectile::Destroyed()
+{
+    Super::Destroyed();
+
+    if (isHitted) return;
+    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), EffectHitGround, GetActorLocation(), GetActorRotation(), FVector::One() * EffectHitGroundSize, true);
 }
 
 void AEnemyProjectile::InitializeProjectile(float Speed, float Damage, float Range, float GravityScale, float AOERadius)
@@ -69,19 +80,45 @@ void AEnemyProjectile::InitializeProjectile(float Speed, float Damage, float Ran
     }
 }
 
+void AEnemyProjectile::InitializeEffects(UParticleSystem* HitGround, float HitGroundSize, UParticleSystem* HitPlayer, float HitPlayerSize)
+{
+    EffectHitGround = HitGround;
+    EffectHitGroundSize = HitGroundSize;
+    EffectHitPlayer = HitPlayer;
+    EffectHitPlayerSize = HitPlayerSize;
+}
+
 void AEnemyProjectile::OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
     if (!OtherActor || OtherActor == this || OtherActor == GetInstigator()) return;
 
     Explode(OtherActor);
+
+    if (!EffectHitGround) return;
+
+    FRotator SurfaceRot = UKismetMathLibrary::MakeRotFromZ(Hit.ImpactNormal);
+    FQuat RootQuat = SurfaceRot.Quaternion();
+    FQuat RandomSpin = FQuat(FVector::UpVector, FMath::DegreesToRadians(FMath::FRandRange(0.f, 360.f)));
+    FRotator FinalRot = (RootQuat * RandomSpin).Rotator();
+
+    FVector SpawnLoc = Hit.ImpactPoint + (Hit.ImpactNormal * 2.0f);
+
+    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), EffectHitGround, SpawnLoc, FinalRot, FVector::One() * EffectHitGroundSize, true);
 }
 
 void AEnemyProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     if (!OtherActor || OtherActor == this || OtherActor == GetInstigator()) return;
-    if (OtherActor->ActorHasTag("Enemy")) return;
+    if (OtherActor->ActorHasTag("Enemy") || OtherActor->ActorHasTag("EnemyProjectile")) return;
 
     Explode(OtherActor);
+
+    if (!EffectHitPlayer) return;
+
+    FVector SpawnLoc = bFromSweep ? FVector(SweepResult.ImpactPoint) : GetActorLocation();
+    FRotator FinalRot(0.f, FMath::FRandRange(0.f, 360.f), 0.f);
+
+    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), EffectHitPlayer, SpawnLoc, FinalRot, FVector::One() * EffectHitPlayerSize, true);
 }
 
 void AEnemyProjectile::Explode(AActor* HitActor)
@@ -106,5 +143,6 @@ void AEnemyProjectile::Explode(AActor* HitActor)
         UGameplayStatics::ApplyDamage(Player, DamageValue, GetInstigatorController(), this, UDamageType::StaticClass());
     }
 
+    isHitted = true;
     Destroy();
 }

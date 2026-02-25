@@ -77,8 +77,13 @@ void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
 
 		bIsAlive = true;
 
-		ProjectileObj = EnemyData->ProjectileObj;
-
+		ProjectileObj = EnemyData->ProjectileData.ProjectileObj;
+		MuzzleEffect = EnemyData->ProjectileData.MuzzleEffect;
+		MuzzleEffectSize = EnemyData->ProjectileData.MuzzleEffectSize;
+		HitGroundEffect = EnemyData->ProjectileData.HitEffectGround;
+		HitGroundEffectSize = EnemyData->ProjectileData.HitEffectGroundSize;
+		HitPlayerEffect = EnemyData->ProjectileData.HitEffectPlayer;
+		HitPlayerEffectSize = EnemyData->ProjectileData.HitEffectPlayerSize;
 	}
 
 	if (bInitializeOnLoad)
@@ -336,7 +341,11 @@ void ABaseEnemy::ExecuteAttackPoint()
 		{
 			float LifeRange = (FinalGravityScale > 0.0f) ? (AttackRange * 8.0f) : (AttackRange * 1.5f);
 			Bullet->InitializeProjectile(RangeProjectileSpeed, Damage, LifeRange, FinalGravityScale, RangeProjectileAOE);
+			Bullet->InitializeEffects(HitGroundEffect, HitGroundEffectSize, HitPlayerEffect, HitPlayerEffectSize);
 		}
+
+		FRotator MuzzleRotation = GetMesh()->GetSocketRotation(MuzzleName);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleEffect, SpawnLocation, MuzzleRotation, FVector::One() * MuzzleEffectSize, true);
 	}
 	else if (EnemyType == EAttackType::Melee)
 	{

@@ -6,7 +6,30 @@
 #include "Engine/DataTable.h"
 #include "Enemy/ICombatEntity.h"
 #include "Enemy/EnemyProjectile.h"
+#include "Particles/ParticleSystem.h"
 #include "EnemyData.generated.h"
+
+USTRUCT(BlueprintType)
+struct FEnemyRangeObjectData
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    TSubclassOf<AEnemyProjectile> ProjectileObj;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* MuzzleEffect;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float MuzzleEffectSize;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* HitEffectGround;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float HitEffectGroundSize;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* HitEffectPlayer;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float HitEffectPlayerSize;
+};
 
 USTRUCT(BlueprintType)
 struct FEnemyData : public FTableRowBase
@@ -88,6 +111,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
     float StageRewardInc;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Object")
-    TSubclassOf<AEnemyProjectile> ProjectileObj;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectData")
+    FEnemyRangeObjectData ProjectileData;
 };

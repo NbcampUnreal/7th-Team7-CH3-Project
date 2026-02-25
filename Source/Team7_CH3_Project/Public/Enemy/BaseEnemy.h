@@ -8,6 +8,7 @@
 #include "Enemy/IEntityStats.h"
 #include "Enemy/ICombatEntity.h"
 #include "Enemy/IAIBehavior.h"
+#include "Particles/ParticleSystem.h"
 #include "BaseEnemy.generated.h"
 
 class UEnemyHealthBarComponent;
@@ -131,6 +132,15 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets")
 	TSubclassOf<class AEnemyProjectile> ProjectileObj;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets")
+	UParticleSystem* MuzzleEffect;
+	float MuzzleEffectSize;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets")
+	UParticleSystem* HitGroundEffect;
+	float HitGroundEffectSize;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets")
+	UParticleSystem* HitPlayerEffect;
+	float HitPlayerEffectSize;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
 	UEnemyHealthBarComponent* HealthBarComp;

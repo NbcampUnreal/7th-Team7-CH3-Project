@@ -13,4 +13,6 @@ class TEAM7_CH3_PROJECT_API AKirboGameMode : public AGameMode
 
 public:
 	AKirboGameMode();
+
+	void OnEnemyKilled(int ScoreDrop);
 };

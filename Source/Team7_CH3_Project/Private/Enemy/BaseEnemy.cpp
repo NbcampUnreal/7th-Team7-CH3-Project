@@ -17,7 +17,6 @@
 ABaseEnemy::ABaseEnemy()
 {
     PrimaryActorTick.bCanEverTick = false;
-    Tags.Add(FName("Enemy"));
 
     HealthBarComp = CreateDefaultSubobject<UEnemyHealthBarComponent>(TEXT("HealthBarComp"));
     HealthBarComp->SetupAttachment(RootComponent);
@@ -27,6 +26,7 @@ ABaseEnemy::ABaseEnemy()
 void ABaseEnemy::BeginPlay()
 {
     Super::BeginPlay();
+    Tags.Add(FName("Enemy"));
 
     if (bTestInitialize)
     {

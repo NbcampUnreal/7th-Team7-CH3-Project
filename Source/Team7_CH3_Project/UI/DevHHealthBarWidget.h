@@ -14,6 +14,7 @@ class TEAM7_CH3_PROJECT_API UDevHHealthBarWidget : public UUserWidget
 
 protected:
     virtual void NativeConstruct() override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
     UPROPERTY(meta = (BindWidget))
     class UProgressBar* HealthBar; // HP
@@ -21,6 +22,11 @@ protected:
     class UTextBlock* TextBlock_Health; // HP 텍스트
 
     FText HealthFormat; // "{CurrentHP} / {MaxHP}" 형식 저장
+
+    float TargetPercent = 1.0f; // 최종적으로 도달해야 할 목표 퍼센트
+    float CurrentPercent = 1.0f; // 현재 화면에 보여지고 있는 퍼센트
+    UPROPERTY(EditAnywhere, Category = "UI Settings")
+    float InterpSpeed = 5.0f; // 보간 속도
 
 public:
     UFUNCTION()

@@ -10,28 +10,30 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Character/KirboGameMode.h"
 #include "Team7_CH3_Project/Public/Character/KirboStatComponent.h"
 #include "Team7_CH3_Project/UI/EnemyHealthBarComponent.h"
 #include "Team7_CH3_Project/UI/DamageFloatingText.h"
 #include "Team7_CH3_Project/UI/DevHHUD.h"
 
+
 ABaseEnemy::ABaseEnemy()
 {
-    PrimaryActorTick.bCanEverTick = false;
-    HealthBarComp = CreateDefaultSubobject<UEnemyHealthBarComponent>(TEXT("HealthBarComp"));
-    HealthBarComp->SetupAttachment(RootComponent);
+	PrimaryActorTick.bCanEverTick = false;
+	HealthBarComp = CreateDefaultSubobject<UEnemyHealthBarComponent>(TEXT("HealthBarComp"));
+	HealthBarComp->SetupAttachment(RootComponent);
 
 }
 
 void ABaseEnemy::BeginPlay()
 {
-    Super::BeginPlay();
-    Tags.Add(FName("Enemy"));
+	Super::BeginPlay();
+	Tags.Add(FName("Enemy"));
 
-    if (bTestInitialize)
-    {
-        LoadData();
-    }
+	if (bTestInitialize)
+	{
+		LoadData();
+	}
 }
 
 // =========================================================================
@@ -40,128 +42,132 @@ void ABaseEnemy::BeginPlay()
 
 void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
 {
-    if (!DataTable) return;
+	static const FString ContextString(TEXT("Enemy Data Context"));
+	FEnemyData* EnemyData = DataTable->FindRow<FEnemyData>(*EnemyName, ContextString);
 
-    static const FString ContextString(TEXT("Enemy Data Context"));
-    FEnemyData* EnemyData = DataTable->FindRow<FEnemyData>(*EnemyName, ContextString);
+	if (EnemyData)
+	{
+		HealthIncStage = EnemyData->StageHealthInc;
+		HealthIncWave = EnemyData->WaveHealthInc;
+		DamageIncStage = EnemyData->StageDamageInc;
+		DamageIncWave = EnemyData->WaveDamageInc;
+		RewardIncStage = EnemyData->StageRewardInc;
+		RewardIncWave = EnemyData->WaveRewardInc;
 
-    if (EnemyData)
-    {
-        HealthIncStage = EnemyData->StageHealthInc;
-        HealthIncWave = EnemyData->WaveHealthInc;
-        DamageIncStage = EnemyData->StageDamageInc;
-        DamageIncWave = EnemyData->WaveDamageInc;
-        RewardIncStage = EnemyData->StageRewardInc;
-        RewardIncWave = EnemyData->WaveRewardInc;
+		HealthMax = EnemyData->HealthMax * (1 + (HealthIncStage * StageCount) + (HealthIncWave * WaveCount));
+		Health = HealthMax;
+		Defence = EnemyData->Defence;
+		Damage = EnemyData->Damage * (1 + (DamageIncStage * StageCount) + (DamageIncWave * WaveCount));
 
-        HealthMax = EnemyData->HealthMax * (1 + (HealthIncStage * StageCount) + (HealthIncWave * WaveCount));
-        Health = HealthMax;
-        Defence = EnemyData->Defence;
-        Damage = EnemyData->Damage * (1 + (DamageIncStage * StageCount) + (DamageIncWave * WaveCount));
+		EnemyType = EnemyData->AttackType;
+		AttackRange = EnemyData->AttackRange;
+		AttackCooldown = EnemyData->AttackCooldown;
+		ZDifferenceAllowed = EnemyData->ZDifferenceAllowed;
 
-        EnemyType = EnemyData->AttackType;
-        AttackRange = EnemyData->AttackRange;
-        AttackCooldown = EnemyData->AttackCooldown;
-        ZDifferenceAllowed = EnemyData->ZDifferenceAllowed;
+		MeleeAttackAngle = EnemyData->MeleeAttackAngle;
+		RangeProjectileSpeed = EnemyData->RangeProjectileSpeed;
+		RangeProjectileGravity = EnemyData->RangeProjectileGravity;
+		RangeProjectileAOE = EnemyData->RangeProjectileAOE;
 
-        MeleeAttackAngle = EnemyData->MeleeAttackAngle;
-        RangeProjectileSpeed = EnemyData->RangeProjectileSpeed;
-        RangeProjectileGravity = EnemyData->RangeProjectileGravity;
-        RangeProjectileAOE = EnemyData->RangeProjectileAOE;
+		Movespeed = EnemyData->Movespeed;
+		GetCharacterMovement()->MaxWalkSpeed = Movespeed;
 
-        Movespeed = EnemyData->Movespeed;
-        GetCharacterMovement()->MaxWalkSpeed = Movespeed;
+		GoldRaward = EnemyData->GoldRaward;
+		ScoreRaward = EnemyData->ScoreRaward;
 
-        GoldRaward = EnemyData->GoldRaward;
-        ScoreRaward = EnemyData->ScoreRaward;
+		bIsAlive = true;
 
-        bIsAlive = true;
+		ProjectileObj = EnemyData->ProjectileObj;
 
-        ProjectileObj = EnemyData->ProjectileObj;
+	}
 
-    }
-
-    if (bInitializeOnLoad)
-    {
-        StartAct();
-    }
+	if (bInitializeOnLoad)
+	{
+		StartAct();
+	}
 }
 
 void ABaseEnemy::TakeDamage(float DamageAmount)
 {
-    if (!bIsAlive) return;
+	if (!bIsAlive) return;
 
-    float DamageCalc = DamageAmount * (100.0f / (100.0f + Defence));
-    Health -= DamageCalc;
+	float DamageCalc = DamageAmount * (100.0f / (100.0f + Defence));
+	Health -= DamageCalc;
 
-    if (HealthBarComp)
-    {
-        HealthBarComp->ShowAndUpdateHP(Health, HealthMax);
-    }
-    if (DamageTextClass)
-    {
-        FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
+	if (HealthBarComp)
+	{
+		HealthBarComp->ShowAndUpdateHP(Health, HealthMax);
+	}
+	if (DamageTextClass)
+	{
+		FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
 
-        ADamageFloatingText* DamageTextActor = GetWorld()->SpawnActor<ADamageFloatingText>(
-            DamageTextClass,
-            SpawnLocation,
-            FRotator::ZeroRotator
-        );
-        if (DamageTextActor)
-        {
-            DamageTextActor->SetDamageValue(DamageCalc);
-        }
-    }
+		ADamageFloatingText* DamageTextActor = GetWorld()->SpawnActor<ADamageFloatingText>(
+			DamageTextClass,
+			SpawnLocation,
+			FRotator::ZeroRotator
+		);
+		if (DamageTextActor)
+		{
+			DamageTextActor->SetDamageValue(DamageCalc);
+		}
+	}
 
-    if (Health <= 0)
-    {
-        Die();
-    }
+	if (Health <= 0)
+	{
+		Die();
+	}
 }
 
 void ABaseEnemy::Die()
 {
-    if (!bIsAlive) return;
-    bIsAlive = false;
+	if (!bIsAlive) return;
+	bIsAlive = false;
 
-    if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
-    {
-        HUD->AddGameLog(FName("Kill_Enemy"));
-    }
+	// 적 처치시 점수 부여 -> KirboGameMode로 전달
+	if (AKirboGameMode* GM = Cast<AKirboGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		GM->OnEnemyKilled(FMath::RoundToInt(ScoreRaward));
+	}
 
-    if (AEnemyAIControl* AICont = Cast<AEnemyAIControl>(GetController()))
-    {
-        AICont->StopMovement();
-        AICont->UnPossess();
-    }
+	if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
+	{
+		HUD->AddGameLog(FName("Kill_Enemy"));
+	}
 
-    GetWorldTimerManager().ClearAllTimersForObject(this);
-    bIsAttackReady = false;
+	if (AEnemyAIControl* AICont = Cast<AEnemyAIControl>(GetController()))
+	{
+		AICont->StopMovement();
+		AICont->UnPossess();
+	}
 
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	bIsAttackReady = false;
 
-    if (HealthBarComp)
-    {
-        HealthBarComp->SetVisibility(false);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-        if (GetWorld())
-        {
-            GetWorld()->GetTimerManager().ClearAllTimersForObject(HealthBarComp);
-        }
-    }
+	if (HealthBarComp)
+	{
+		HealthBarComp->SetVisibility(false);
 
-    if (DeathMontages.Num() > 0)
-    {
-        int32 RandomIdx = FMath::RandRange(0, DeathMontages.Num() - 1);
-        PlayAnimMontage(DeathMontages[RandomIdx]);
-    }
-    else
-    {
-        Destroy();
-    }
+		if (GetWorld())
+		{
+			GetWorld()->GetTimerManager().ClearAllTimersForObject(HealthBarComp);
+		}
+	}
 
-    SetLifeSpan(10.0f);
+	if (DeathMontages.Num() > 0)
+	{
+		int32 RandomIdx = FMath::RandRange(0, DeathMontages.Num() - 1);
+		PlayAnimMontage(DeathMontages[RandomIdx]);
+	}
+	else
+	{
+		Destroy();
+	}
+
+	SetLifeSpan(10.0f);
 }
 
 // =========================================================================
@@ -170,21 +176,21 @@ void ABaseEnemy::Die()
 
 void ABaseEnemy::TryAttack()
 {
-    if (bIsAttackReady && bIsAlive)
-    {
-        bIsAttackReady = false;
-        ExecuteAttackAnimation();
+	if (bIsAttackReady && bIsAlive)
+	{
+		bIsAttackReady = false;
+		ExecuteAttackAnimation();
 
-        FTimerHandle TimerHandle_AttackReset;
-        GetWorldTimerManager().SetTimer(TimerHandle_AttackReset, [this]() {
-            bIsAttackReady = true;
-            }, AttackCooldown, false);
-    }
+		FTimerHandle TimerHandle_AttackReset;
+		GetWorldTimerManager().SetTimer(TimerHandle_AttackReset, [this]() {
+			bIsAttackReady = true;
+			}, AttackCooldown, false);
+	}
 }
 
 void ABaseEnemy::ExecuteAction(int32 ActionID)
 {
-    ExecuteActionAnimation();
+	ExecuteActionAnimation();
 }
 
 // =========================================================================
@@ -193,39 +199,39 @@ void ABaseEnemy::ExecuteAction(int32 ActionID)
 
 void ABaseEnemy::StartAct()
 {
-    bIsActive = true;
-    GetCharacterMovement()->MaxWalkSpeed = Movespeed;
+	bIsActive = true;
+	GetCharacterMovement()->MaxWalkSpeed = Movespeed;
 }
 
 AActor* ABaseEnemy::GetTarget() const
 {
-    return UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+	return UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
 }
 
 bool ABaseEnemy::HasLineOfSight() const
 {
-    AActor* Target = GetTarget();
-    if (!Target) return false;
+	AActor* Target = GetTarget();
+	if (!Target) return false;
 
-    FHitResult Hit;
-    FCollisionQueryParams Params;
-    Params.AddIgnoredActor(this);
+	FHitResult Hit;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
 
-    TArray<AActor*> AllEnemies;
-    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Enemy"), AllEnemies);
-    Params.AddIgnoredActors(AllEnemies);
+	TArray<AActor*> AllEnemies;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Enemy"), AllEnemies);
+	Params.AddIgnoredActors(AllEnemies);
 
-    FVector StartLocation = GetActorLocation() + FVector(0, 0, 60.f);
-    FVector EndLocation = Target->GetActorLocation();
+	FVector StartLocation = GetActorLocation() + FVector(0, 0, 60.f);
+	FVector EndLocation = Target->GetActorLocation();
 
-    bool bHitSomething = GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, ECC_Visibility, Params);
+	bool bHitSomething = GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, ECC_Visibility, Params);
 
-    if (!bHitSomething || (Hit.GetActor() == Target))
-    {
-        return true;
-    }
+	if (!bHitSomething || (Hit.GetActor() == Target))
+	{
+		return true;
+	}
 
-    return false;
+	return false;
 }
 
 // =========================================================================
@@ -234,118 +240,118 @@ bool ABaseEnemy::HasLineOfSight() const
 
 void ABaseEnemy::ExecuteAttackAnimation()
 {
-    bIsAiming = true;
-    if (AttackMontage)
-    {
-        PlayAnimMontage(AttackMontage);
-    }
+	bIsAiming = true;
+	if (AttackMontage)
+	{
+		PlayAnimMontage(AttackMontage);
+	}
 }
 
 void ABaseEnemy::ExecuteActionAnimation()
 {
-    // No action for base enemy.
+	// No action for base enemy.
 }
 
 void ABaseEnemy::ExecuteAimDone()
 {
-    bIsAiming = false;
+	bIsAiming = false;
 
-    AActor* Target = GetTarget();
-    if (!Target) return;
-    SavedTargetLoc = Target->GetActorLocation();
+	AActor* Target = GetTarget();
+	if (!Target) return;
+	SavedTargetLoc = Target->GetActorLocation();
 }
 
 void ABaseEnemy::ExecuteAttackPoint()
 {
-    if (EnemyType == EAttackType::Ranged && ProjectileObj)
-    {
-        AActor* Target = GetTarget();
-        if (!Target) return;
+	if (EnemyType == EAttackType::Ranged && ProjectileObj)
+	{
+		AActor* Target = GetTarget();
+		if (!Target) return;
 
-        FVector SpawnLocation = GetMesh()->GetSocketLocation(MuzzleName);
-        FVector TargetLocation = SavedTargetLoc;
+		FVector SpawnLocation = GetMesh()->GetSocketLocation(MuzzleName);
+		FVector TargetLocation = SavedTargetLoc;
 
-        float TargetHalfHeight = 0.0f;
-        ACharacter* TargetChar = Cast<ACharacter>(Target);
-        if (TargetChar && TargetChar->GetCapsuleComponent())
-        {
-            TargetHalfHeight = TargetChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-        }
+		float TargetHalfHeight = 0.0f;
+		ACharacter* TargetChar = Cast<ACharacter>(Target);
+		if (TargetChar && TargetChar->GetCapsuleComponent())
+		{
+			TargetHalfHeight = TargetChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+		}
 
-        if (RangeProjectileGravity <= 0.0f)
-        {
-            TargetLocation.Z = SpawnLocation.Z;
-        }
-        else
-        {
-            TargetLocation.Z -= TargetHalfHeight;
-            if (RangeProjectileAOE > 0.0f)
-            {
-                float RandomOffset = RangeProjectileAOE * 0.3f;
-                TargetLocation.X += FMath::FRandRange(-RandomOffset, RandomOffset);
-                TargetLocation.Y += FMath::FRandRange(-RandomOffset, RandomOffset);
-            }
-        }
+		if (RangeProjectileGravity <= 0.0f)
+		{
+			TargetLocation.Z = SpawnLocation.Z;
+		}
+		else
+		{
+			TargetLocation.Z -= TargetHalfHeight;
+			if (RangeProjectileAOE > 0.0f)
+			{
+				float RandomOffset = RangeProjectileAOE * 0.3f;
+				TargetLocation.X += FMath::FRandRange(-RandomOffset, RandomOffset);
+				TargetLocation.Y += FMath::FRandRange(-RandomOffset, RandomOffset);
+			}
+		}
 
-        FRotator FireRotation;
-        float FinalGravityScale = RangeProjectileGravity;
+		FRotator FireRotation;
+		float FinalGravityScale = RangeProjectileGravity;
 
-        if (RangeProjectileGravity > 0.0f)
-        {
-            FVector OutLaunchVelocity;
-            bool bHaveSolution = false;
+		if (RangeProjectileGravity > 0.0f)
+		{
+			FVector OutLaunchVelocity;
+			bool bHaveSolution = false;
 
-            for (int32 i = 0; i < 5; i++)
-            {
-                float CustomGravityZ = GetWorld()->GetGravityZ() * FinalGravityScale;
+			for (int32 i = 0; i < 5; i++)
+			{
+				float CustomGravityZ = GetWorld()->GetGravityZ() * FinalGravityScale;
 
-                bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(this, OutLaunchVelocity, SpawnLocation, TargetLocation, RangeProjectileSpeed, false, 0.0f, CustomGravityZ, ESuggestProjVelocityTraceOption::DoNotTrace);
+				bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(this, OutLaunchVelocity, SpawnLocation, TargetLocation, RangeProjectileSpeed, false, 0.0f, CustomGravityZ, ESuggestProjVelocityTraceOption::DoNotTrace);
 
-                if (bHaveSolution) break;
+				if (bHaveSolution) break;
 
-                FinalGravityScale *= 0.75f;
-            }
+				FinalGravityScale *= 0.75f;
+			}
 
-            if (bHaveSolution)
-            {
-                FireRotation = OutLaunchVelocity.Rotation();
-            }
-            else
-            {
-                FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
-            }
-        }
-        else
-        {
-            FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
-            FinalGravityScale = 0.0f;
-        }
+			if (bHaveSolution)
+			{
+				FireRotation = OutLaunchVelocity.Rotation();
+			}
+			else
+			{
+				FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
+			}
+		}
+		else
+		{
+			FireRotation = UKismetMathLibrary::FindLookAtRotation(SpawnLocation, TargetLocation);
+			FinalGravityScale = 0.0f;
+		}
 
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.Owner = this;
-        SpawnParams.Instigator = GetInstigator();
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = GetInstigator();
 
-        AEnemyProjectile* Bullet = GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileObj, SpawnLocation, FireRotation, SpawnParams);
-        if (Bullet)
-        {
-            float LifeRange = (FinalGravityScale > 0.0f) ? (AttackRange * 8.0f) : (AttackRange * 1.5f);
-            Bullet->InitializeProjectile(RangeProjectileSpeed, Damage, LifeRange, FinalGravityScale, RangeProjectileAOE);
-        }
-    }
-    else if (EnemyType == EAttackType::Melee)
-    {
-        AActor* Target = GetTarget();
-        if (Target && GetDistanceTo(Target) <= AttackRange)
-        {
-            FVector Forward = GetActorForwardVector();
-            FVector ToTarget = (SavedTargetLoc - GetActorLocation()).GetSafeNormal();
-            float DotProduct = FVector::DotProduct(Forward, ToTarget);
-            float AngleThreshold = FMath::Cos(FMath::DegreesToRadians(MeleeAttackAngle * 0.5f));
+		AEnemyProjectile* Bullet = GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileObj, SpawnLocation, FireRotation, SpawnParams);
+		if (Bullet)
+		{
+			float LifeRange = (FinalGravityScale > 0.0f) ? (AttackRange * 8.0f) : (AttackRange * 1.5f);
+			Bullet->InitializeProjectile(RangeProjectileSpeed, Damage, LifeRange, FinalGravityScale, RangeProjectileAOE);
+		}
+	}
+	else if (EnemyType == EAttackType::Melee)
+	{
+		AActor* Target = GetTarget();
+		if (Target && GetDistanceTo(Target) <= AttackRange)
+		{
+			FVector Forward = GetActorForwardVector();
+			FVector ToTarget = (SavedTargetLoc - GetActorLocation()).GetSafeNormal();
+			float DotProduct = FVector::DotProduct(Forward, ToTarget);
+			float AngleThreshold = FMath::Cos(FMath::DegreesToRadians(MeleeAttackAngle * 0.5f));
 
-            if (DotProduct >= AngleThreshold)
-            {
-                UGameplayStatics::ApplyDamage(Target, Damage, GetController(), this, UDamageType::StaticClass());
-            }
-        }
-    }
+			if (DotProduct >= AngleThreshold)
+			{
+				UGameplayStatics::ApplyDamage(Target, Damage, GetController(), this, UDamageType::StaticClass());
+			}
+		}
+	}
 }

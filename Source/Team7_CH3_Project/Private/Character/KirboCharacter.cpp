@@ -26,7 +26,7 @@ AKirboCharacter::AKirboCharacter()
 	SpringArmComp->bInheritYaw = false;
 	SpringArmComp->bInheritRoll = false;
 	SpringArmComp->bUsePawnControlRotation = false;
-    SpringArmComp->bDoCollisionTest = false;
+	SpringArmComp->bDoCollisionTest = false;
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraComp->SetupAttachment(SpringArmComp);
@@ -57,41 +57,41 @@ void AKirboCharacter::BeginPlay()
 		}
 	}
 
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultContext, 0);
 		}
 
-		DisableInput(PlayerController);
+		DisableInput(PC);
 	}
 
 	FTimerHandle InputTimerHandle;
 	GetWorldTimerManager().SetTimer(InputTimerHandle, this, &AKirboCharacter::EnablePlayerInput, 5.0f, false);
 
-    if (CharacterStatTable)
-    {
-        static const FString ContextString(TEXT("Stat Init"));
-        FKirboStatRow* StatData = CharacterStatTable->FindRow<FKirboStatRow>(FName("Player"), ContextString);
+	if (CharacterStatTable)
+	{
+		static const FString ContextString(TEXT("Stat Init"));
+		FKirboStatRow* StatData = CharacterStatTable->FindRow<FKirboStatRow>(FName("Player"), ContextString);
 
-        // StatComp가 제대로 생성되었는지, StatData가 존재하는지 확인
-        if (StatComp && StatData)
-        {
-            StatComp->InitializeStats(*StatData);\
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("StatComp or StatData is NULL at BeginPlay!"));
-        }
-    }
+		// StatComp가 제대로 생성되었는지, StatData가 존재하는지 확인
+		if (StatComp && StatData)
+		{
+			StatComp->InitializeStats(*StatData);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("StatComp or StatData is NULL at BeginPlay!"));
+		}
+	}
 }
 
 void AKirboCharacter::EnablePlayerInput()
 {
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
-		EnableInput(PlayerController);
+		EnableInput(PC);
 		bIsControlEnabled = true;
 	}
 }
@@ -132,9 +132,9 @@ void AKirboCharacter::Tick(float DeltaTime)
 
 	if (bIsControlEnabled)
 	{
-		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+		APlayerController* PC = Cast<APlayerController>(GetController());
 		FHitResult Hit;
-		if (PlayerController && PlayerController->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+		if (PC && PC->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 		{
 			FVector LookDir = Hit.ImpactPoint - GetActorLocation();
 			LookDir.Z = 0.f;
@@ -146,8 +146,8 @@ void AKirboCharacter::Tick(float DeltaTime)
 void AKirboCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-    // KH 260224 추가 : 플로팅 텍스트 테스트용 K키
-    PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &AKirboCharacter::TestSelfDamage);
+	// KH 260224 추가 : 플로팅 텍스트 테스트용 K키
+	PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &AKirboCharacter::TestSelfDamage);
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
@@ -292,8 +292,9 @@ void AKirboCharacter::HandleDeath()
 // KH 260224 추가 : 플로팅 텍스트 테스트용
 void AKirboCharacter::TestSelfDamage()
 {
-    UGameplayStatics::ApplyDamage(this, 10.0f, GetController(), this, UDamageType::StaticClass());
+	UGameplayStatics::ApplyDamage(this, 10.0f, GetController(), this, UDamageType::StaticClass());
 }
+
 void AKirboCharacter::UpdateStamina(float CurrentStamina, float MaxStamina)
 {
 	if (StaminaMaterialDynamic)
@@ -317,13 +318,8 @@ float AKirboCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 	if (StatComp->CurrentHP > 0.f)
 	{
-		if (HitMontage)
-		{
-			PlayAnimMontage(HitMontage);
-		}
-
 		bIsInvincible = true;
-        // KH 260224 추가 : 여기서 받는 데미지 딜레이 속도 조절 가능
+		// KH 260224 추가 : 여기서 받는 데미지 딜레이 속도 조절 가능
 		GetWorldTimerManager().SetTimer(InvincibilityTimerHandle, this, &AKirboCharacter::ResetInvincibility, 0.3f, false);
 	}
 	else

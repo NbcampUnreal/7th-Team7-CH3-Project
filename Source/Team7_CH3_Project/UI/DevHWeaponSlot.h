@@ -32,6 +32,7 @@ private:
 
 protected:
     virtual void NativeConstruct() override;
+    bool bIsUnlocked = false; // 해금 상태 저장
 
 
 public:

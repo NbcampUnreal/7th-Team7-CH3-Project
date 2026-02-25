@@ -25,6 +25,8 @@ public:
         RangeProjectileSpeed(1500.0f),
         RangeProjectileGravity(0.0f),
         RangeProjectileAOE(0.0f),
+        GoldRaward(20),
+        ScoreRaward(20),
         WaveHealthInc(0.05f),
         StageHealthInc(0.2f),
         WaveDamageInc(0.03f),
@@ -67,6 +69,11 @@ public:
     float RangeProjectileGravity;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Ranged")
     float RangeProjectileAOE;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+    float GoldRaward;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+    float ScoreRaward;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
     float WaveHealthInc;

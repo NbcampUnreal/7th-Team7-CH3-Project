@@ -125,6 +125,10 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Enemy|Assets")
     FName MuzzleName = "Muzzle_Front";
 
+    // =========================================================================
+    // MISCS
+    // =========================================================================
+
     UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets")
     TSubclassOf<class AEnemyProjectile> ProjectileObj;
 
@@ -132,6 +136,12 @@ protected:
     UEnemyHealthBarComponent* HealthBarComp;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|UI")
     TSubclassOf<ADamageFloatingText> DamageTextClass;
+
+    UPROPERTY(VisibleAnywhere, Category = "Misc")
+    float GoldRaward;
+
+    UPROPERTY(VisibleAnywhere, Category = "Misc")
+    float ScoreRaward;
 
 public:
     // --- IEntityStats Implementation ---

@@ -12,7 +12,8 @@
 				"Engine",
 				"AIModule",
 				"Blutility",
-				"UMG"
+				"UMG",
+				"CoreUObject"
 			]
 		}
 	],

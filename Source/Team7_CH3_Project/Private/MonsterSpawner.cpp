@@ -1,160 +1,143 @@
-﻿//MonsterSpawner.cpp
-#include "MonsterSpawner.h"
-#include "WaveManager.h" // cpp에서만 include
+﻿#include "MonsterSpawner.h"
+#include "WaveManager.h"
 #include "NavigationSystem.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
+// 인클루드 경로는 Public 폴더 기준으로 작성하는 것이 표준입니다.
+#include "Enemy/BaseEnemy.h"
+#include "MonsterWaveRow.h"
 
 int32 AMonsterSpawner::CurrentStage = 1;
 
 AMonsterSpawner::AMonsterSpawner()
 {
-	PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = false;
 }
 
 void AMonsterSpawner::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	if (SpawnCenter.IsZero())
-		SpawnCenter = GetActorLocation();
+    // 1. 현재 월드의 스테이지와 이 스포너의 스테이지가 다르면 작동하지 않도록 함
+    if (StageNumber != CurrentStage) return;
 
-	StartWave(CurrentWave);
+    // 2. 스폰 중심점 설정 (LinkedNavMesh가 있으면 그 위치, 없으면 스포너 본인 위치)
+    SpawnCenter = LinkedNavMesh ? LinkedNavMesh->GetActorLocation() : GetActorLocation();
+
+    // 3. WaveManager 초기화 (기존에 GetRandomNavMeshLocation에 잘못 들어가 있던 로직을 여기로 이동)
+    WaveManager = NewObject<UWaveManager>(this);
+    if (WaveManager)
+    {
+        WaveManager->Initialize(this, WaveDataTable, StageNumber);
+    }
+
+    // 4. 자동 시작 옵션이 있다면 첫 웨이브 실행
+    if (bAutoStart)
+    {
+        StartWave(CurrentWave);
+    }
 }
 
 void AMonsterSpawner::StartWave(int32 WaveNumber)
 {
-	if (!WaveDataTable) return;
+    if (!WaveDataTable) return;
 
-	static const FString Context(TEXT("WaveContext"));
+    static const FString Context(TEXT("WaveContext"));
 
-	FMonsterWaveRow* Row =
-		WaveDataTable->FindRow<FMonsterWaveRow>(
-			FName(*FString::Printf(TEXT("Wave%d"), WaveNumber)),
-			Context);
+    // 데이터 테이블에서 해당 웨이브 행(Row) 정보 찾기
+    FMonsterWaveRow* Row = WaveDataTable->FindRow<FMonsterWaveRow>(
+        FName(*FString::Printf(TEXT("Wave%d"), WaveNumber)),
+        Context);
 
-	if (!Row) return;
+    if (!Row) return;
 
-	AliveEnemyCount = 0;
+    AliveEnemyCount = 0;
 
-	for (const FMonsterSpawnInfo& Info : Row->Enemies)
-	{
-		for (int32 i = 0; i < Info.Count; i++)
-		{
-			SpawnSingleEnemy(Info.EnemyClass);
-		}
-	}
+    // 행에 정의된 적 종류와 수만큼 생성 루프 실행
+    for (const FMonsterSpawnInfo& Info : Row->Enemies)
+    {
+        for (int32 i = 0; i < Info.Count; i++)
+        {
+            SpawnSingleEnemy(Info.EnemyClass);
+        }
+    }
 }
 
-void AMonsterSpawner::SpawnSingleEnemy(
-	TSubclassOf<ABaseEnemy> EnemyClass)
+void AMonsterSpawner::SpawnSingleEnemy(TSubclassOf<ABaseEnemy> EnemyClass)
 {
-	if (!EnemyClass) return;
+    if (!EnemyClass) return;
 
-	FVector SpawnLocation;
-	if (!GetRandomNavMeshLocation(SpawnLocation))
-		return;
+    FVector SpawnLocation;
+    // NavMesh 위에서 유효한 위치를 찾지 못하면 생성 생략
+    if (!GetRandomNavMeshLocation(SpawnLocation)) return;
 
-	ABaseEnemy* Enemy =
-		GetWorld()->SpawnActor<ABaseEnemy>(
-			EnemyClass,
-			SpawnLocation,
-			FRotator::ZeroRotator);
+    // 액터 스폰 (Collision 설정 추가로 겹침 문제 예방)
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-	if (Enemy)
-	{
-		AliveEnemyCount++;
+    ABaseEnemy* Enemy = GetWorld()->SpawnActor<ABaseEnemy>(
+        EnemyClass,
+        SpawnLocation,
+        FRotator::ZeroRotator,
+        SpawnParams);
 
-		//하민 : 이 코드 없으면 작동하지 않아서 임시로 추가했습니다
-		Enemy->LoadData(1, CurrentWave);
+    if (Enemy)
+    {
+        AliveEnemyCount++;
 
-		// 기존 Enemy 코드 수정 없이 전멸 감지
-		Enemy->OnDestroyed.AddDynamic(
-			this,
-			&AMonsterSpawner::HandleEnemyDestroyed);
-	}
+        // 하민님 코드: 데이터 로드 (첫 번째 인자는 스테이지, 두 번째는 웨이브)
+        Enemy->LoadData(StageNumber, CurrentWave);
+
+        // 적이 죽었을 때를 감지하기 위해 OnDestroyed 델리게이트 바인딩
+        Enemy->OnDestroyed.AddDynamic(this, &AMonsterSpawner::HandleEnemyDestroyed);
+    }
 }
 
-void AMonsterSpawner::HandleEnemyDestroyed(
-	AActor* DestroyedActor)
+void AMonsterSpawner::HandleEnemyDestroyed(AActor* DestroyedActor)
 {
-	AliveEnemyCount--;
+    AliveEnemyCount--;
 
-	if (AliveEnemyCount <= 0)
-	{
-		StartNextWave();
-	}
+    // 필드의 모든 적이 죽었을 때만 다음 웨이브 진행
+    if (AliveEnemyCount <= 0)
+    {
+        StartNextWave();
+    }
 }
 
 void AMonsterSpawner::StartNextWave()
 {
-	CurrentWave++;
+    CurrentWave++;
 
-	FTimerHandle Timer;
-
-	GetWorld()->GetTimerManager().SetTimer(
-		Timer,
-		[this]()
-		{
-			StartWave(CurrentWave);
-		},
-		3.f,
-		false);
+    FTimerHandle Timer;
+    // 3초 대기 후 다음 웨이브 시작 (람다 캡처 사용)
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer,
+        [this]()
+        {
+            this->StartWave(this->CurrentWave);
+        },
+        3.f,
+        false);
 }
 
-bool AMonsterSpawner::GetRandomNavMeshLocation(
-	FVector& OutLocation)
-{
-	UNavigationSystemV1* NavSys =
-		FNavigationSystem::GetCurrent<UNavigationSystemV1>(
-			GetWorld());
-
-	if (!NavSys) return false;
-
-	FNavLocation NavLocation;
-
-	if (NavSys->GetRandomPointInNavigableRadius(
-		SpawnCenter,
-		SpawnRadius,
-		NavLocation))
-	{
-		OutLocation = NavLocation.Location;
-		return true;
-	}
-
-    //  현재 스테이지와 다르면 이 스포너는 작동 안함
-    if (StageNumber != CurrentStage)
-    {
-        return;
-    }
-
-    // WaveManager 생성 및 초기화
-    WaveManager = NewObject<UWaveManager>(this); // ✅ Outer 지정
-    WaveManager->Initialize(this, WaveDataTable, StageNumber);
-
-    if (bAutoStart)
-    {
-        WaveManager->StartWave(1);
-    }
-}
-
+// ✅ 중복되었던 함수를 하나로 통합하고 리턴값을 수정했습니다. [cite: 2026-01-14]
 bool AMonsterSpawner::GetRandomNavMeshLocation(FVector& OutLocation)
 {
     UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
     if (!NavSys) return false;
 
     FNavLocation NavLocation;
-    FVector Center = LinkedNavMesh ? LinkedNavMesh->GetActorLocation() : GetActorLocation();
-
-    if (NavSys->GetRandomPointInNavigableRadius(Center, SpawnRadius, NavLocation))
+    // SpawnCenter(또는 LinkedNavMesh)를 기준으로 반지름 내의 랜덤 지점을 찾습니다.
+    if (NavSys->GetRandomPointInNavigableRadius(SpawnCenter, SpawnRadius, NavLocation))
     {
         OutLocation = NavLocation.Location;
         return true;
     }
 
-	return false;
+    return false;
 }
 
 int32 AMonsterSpawner::GetCurrentWave() const
 {
-    return WaveManager ? WaveManager->GetCurrentWaveNumber() : 0;
+    return WaveManager ? WaveManager->GetCurrentWaveNumber() : CurrentWave;
 }

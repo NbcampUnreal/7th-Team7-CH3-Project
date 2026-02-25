@@ -12,11 +12,11 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Team7_CH3_Project/Public/Character/KirboStatComponent.h"
 #include "Team7_CH3_Project/UI/EnemyHealthBarComponent.h"
+#include "Team7_CH3_Project/UI/DevHHUD.h"
 
 ABaseEnemy::ABaseEnemy()
 {
     PrimaryActorTick.bCanEverTick = false;
-    Tags.Add(FName("Enemy"));
 
     HealthBarComp = CreateDefaultSubobject<UEnemyHealthBarComponent>(TEXT("HealthBarComp"));
     HealthBarComp->SetupAttachment(RootComponent);
@@ -26,6 +26,7 @@ ABaseEnemy::ABaseEnemy()
 void ABaseEnemy::BeginPlay()
 {
     Super::BeginPlay();
+    Tags.Add(FName("Enemy"));
 
     if (bTestInitialize)
     {
@@ -115,6 +116,11 @@ void ABaseEnemy::Die()
 {
     if (!bIsAlive) return;
     bIsAlive = false;
+
+    if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
+    {
+        HUD->AddGameLog(FName("Kill_Enemy"));
+    }
 
     if (AEnemyAIControl* AICont = Cast<AEnemyAIControl>(GetController()))
     {

@@ -12,15 +12,15 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Team7_CH3_Project/Public/Character/KirboStatComponent.h"
 #include "Team7_CH3_Project/UI/EnemyHealthBarComponent.h"
+#include "Team7_CH3_Project/UI/DamageFloatingText.h"
 #include "Team7_CH3_Project/UI/DevHHUD.h"
 
 ABaseEnemy::ABaseEnemy()
 {
     PrimaryActorTick.bCanEverTick = false;
-
     HealthBarComp = CreateDefaultSubobject<UEnemyHealthBarComponent>(TEXT("HealthBarComp"));
     HealthBarComp->SetupAttachment(RootComponent);
-    StatComp = CreateDefaultSubobject<UKirboStatComponent>(TEXT("StatComp"));
+
 }
 
 void ABaseEnemy::BeginPlay()
@@ -76,12 +76,6 @@ void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
 
         ProjectileObj = EnemyData->ProjectileObj;
 
-        if (StatComp)
-        {
-            FKirboStatRow MonsterStat;
-            MonsterStat.MaxHP = HealthMax;
-            StatComp->InitializeStats(MonsterStat);
-        }
     }
 
     if (bInitializeOnLoad)
@@ -101,9 +95,19 @@ void ABaseEnemy::TakeDamage(float DamageAmount)
     {
         HealthBarComp->ShowAndUpdateHP(Health, HealthMax);
     }
-    if (StatComp)
+    if (DamageTextClass)
     {
-        StatComp->TakeDamage(DamageCalc);
+        FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
+
+        ADamageFloatingText* DamageTextActor = GetWorld()->SpawnActor<ADamageFloatingText>(
+            DamageTextClass,
+            SpawnLocation,
+            FRotator::ZeroRotator
+        );
+        if (DamageTextActor)
+        {
+            DamageTextActor->SetDamageValue(DamageCalc);
+        }
     }
 
     if (Health <= 0)

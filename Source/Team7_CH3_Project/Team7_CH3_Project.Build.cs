@@ -15,6 +15,7 @@ public class Team7_CH3_Project : ModuleRules
             "InputCore",
             "NavigationSystem",
             "AIModule",
+            "GameplayTasks",
             "Niagara",
             "EnhancedInput",
             "UMG",

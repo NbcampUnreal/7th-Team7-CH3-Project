@@ -129,7 +129,8 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
     UEnemyHealthBarComponent* HealthBarComp;
-
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat")
+    class UKirboStatComponent* StatComp;
 
 public:
     // --- IEntityStats Implementation ---

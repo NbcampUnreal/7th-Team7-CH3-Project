@@ -10,6 +10,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Team7_CH3_Project/Public/Character/KirboStatComponent.h"
 #include "Team7_CH3_Project/UI/EnemyHealthBarComponent.h"
 
 ABaseEnemy::ABaseEnemy()
@@ -19,6 +20,7 @@ ABaseEnemy::ABaseEnemy()
 
     HealthBarComp = CreateDefaultSubobject<UEnemyHealthBarComponent>(TEXT("HealthBarComp"));
     HealthBarComp->SetupAttachment(RootComponent);
+    StatComp = CreateDefaultSubobject<UKirboStatComponent>(TEXT("StatComp"));
 }
 
 void ABaseEnemy::BeginPlay()
@@ -72,6 +74,13 @@ void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
         bIsAlive = true;
 
         ProjectileObj = EnemyData->ProjectileObj;
+
+        if (StatComp)
+        {
+            FKirboStatRow MonsterStat;
+            MonsterStat.MaxHP = HealthMax;
+            StatComp->InitializeStats(MonsterStat);
+        }
     }
 
     if (bInitializeOnLoad)
@@ -84,11 +93,16 @@ void ABaseEnemy::TakeDamage(float DamageAmount)
 {
     if (!bIsAlive) return;
 
-    Health -= DamageAmount * (100.0f / (100.0f + Defence));
+    float DamageCalc = DamageAmount * (100.0f / (100.0f + Defence));
+    Health -= DamageCalc;
 
     if (HealthBarComp)
     {
         HealthBarComp->ShowAndUpdateHP(Health, HealthMax);
+    }
+    if (StatComp)
+    {
+        StatComp->TakeDamage(DamageCalc);
     }
 
     if (Health <= 0)

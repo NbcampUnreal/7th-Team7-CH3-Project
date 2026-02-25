@@ -10,7 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemComponent.h"
-#include "Enemy/IEnemy.h"
+#include "Enemy/IEntityStats.h"
 #include "DrawDebugHelpers.h"
 
 // Sets default values
@@ -171,7 +171,7 @@ void AGrenadeProjectile::Explode()
 
 			if (HitActor && !DamagedActors.Contains(HitActor))
 			{
-				IEnemy* Enemy = Cast<IEnemy>(HitActor);
+				IEntityStats* Enemy = Cast<IEntityStats>(HitActor);
 				if (Enemy)
 				{
 					float Distance = FVector::Dist(Start, HitActor->GetActorLocation());

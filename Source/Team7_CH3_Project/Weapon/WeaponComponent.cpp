@@ -4,31 +4,21 @@
 #include "Team7_CH3_Project/Weapon/WeaponComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "Particles/ParticleSystem.h"
-#include "Particles/ParticleSystemComponent.h"
+#include "Camera/CameraShakeBase.h"
 #include "Kismet/GameplayStatics.h"
-#include "TimerManager.h"
-#include "DrawDebugHelpers.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "GrenadeProjectile.h"
 #include "GrenadeStat.h"
-#include "WeaponData.h"
 #include "Enemy/IEnemy.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
 #include "Team7_CH3_Project/UI/DevHHUD.h" // KH 추가 : UI
 #include "Team7_CH3_Project/UI/DevHCrosshairWidget.h" // KH 추가 : UI
 
-// Sets default values for this component's properties
 UWeaponComponent::UWeaponComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
-	CurrentStat = nullptr;
-	// ...
 }
 
-
-// Called when the game starts
 void UWeaponComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -82,7 +72,10 @@ void UWeaponComponent::StartFire()
 {
 	bHoldingFire = true; // 마우스를 눌렀음을 기록
 
-	if (!CurrentStat || bIsReloading) return;
+	// 상태 가드: Idle 상태이거나 이미 Firing 중일 때만 사격 루프 진입 가능
+	if (CurrentState != EWeaponState::Idle && CurrentState != EWeaponState::Firing) return;
+
+	if (!CurrentStat) return;
 
 	// 탄약이 없으면 즉시 장전 시도
 	if (CurrentAmmo <= 0)
@@ -91,9 +84,13 @@ void UWeaponComponent::StartFire()
 		return;
 	}
 
+	// 상태 확정 : 실제로 사격 상태
+	CurrentState = EWeaponState::Firing;
+
 	GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
 	float CurrentTime = GetWorld()->GetTimeSeconds();
 
+	// 연사 간격 보정 (즉시 발사 가능 여부 판단)
 	if (CurrentTime - LastFireTime >= CurrentStat->FireRate)
 	{
 		// 충분한 시간이 지났다면 즉시 발사 가능하도록 LastFireTime을 과거로 설정
@@ -116,211 +113,115 @@ void UWeaponComponent::StopFire()
 {
 	bHoldingFire = false; // 마우스를 뗐음을 기록
 	GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+
+	// 상태 복구 : 사격 중이었다면 다시 Idle로 변경
+	// 장전 중이거나 무기 교체 중에 마우스를 뗀 것이라면 해당 상태를 유지해야 함
+	if (CurrentState == EWeaponState::Firing)
+	{
+		CurrentState = EWeaponState::Idle;
+		UE_LOG(LogTemp, Log, TEXT("사격 중단"));
+	}
 }
 
 void UWeaponComponent::Fire()
 {
-    // 1. 점수 및 스탯 체크 (최우선 가드 로직)
-    if (!CurrentStat || GetCurrentScore() < CurrentStat->UnlockScore)
-    {
-        // 점수가 부족해지면 연사 타이머를 해제하고 사격을 멈춥니다.
-        GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
-        return;
-    }
+	// 사격 가능 상태 검증
+	if (!CanFire())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+		if (CurrentState == EWeaponState::Firing)
+		{
+			CurrentState = EWeaponState::Idle;
+		}
 
-    // 2. 상태 체크 (장전 중이거나 탄약이 없는 경우)
-    if (bIsReloading || CurrentAmmo <= 0)
-    {
-        GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
-        if (CurrentAmmo <= 0) StartReload();
-        return;
-    }
+		if (CurrentAmmo <= 0) StartReload();
+		return;
+	}
 
-	// 마우스 연타 방지 로직 : FireRate보다 빠르게 입력이 들어오면 무시
-	float CurrentTime = GetWorld()->GetTimeSeconds();
-	// 무기를 바꾼 지 WeaponSwitchDelay만큼 지나지 않았다면 발사하지 않음
-	if (CurrentTime - LastWeaponSwitchTime < WeaponSwitchDelay) return;
-	// 타이머 오차를 고려해 FireRate의 80%만 지나도 발사를 허용 (연사 끊김 방지)
-	if (CurrentTime - LastFireTime < CurrentStat->FireRate * 0.8f) return;
-
-	AActor* OwnerActor = GetOwner();
-	ACharacter* OwnerChar = Cast<ACharacter>(OwnerActor);
+	CurrentState = EWeaponState::Firing;
+	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
 	if (!OwnerChar) return;
 
-	APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController());
-	if (!PC) return;
+	if (CurrentStat->FireCameraShake)
+	{
+		if (APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController()))
+		{
+			PC->ClientStartCameraShake(CurrentStat->FireCameraShake);
+		}
+	}
 
-	USkeletalMeshComponent* Mesh = OwnerChar->GetMesh();
-	UWorld* World = GetWorld();
-	if (!Mesh || !World) return;
+	float CurrentTime = GetWorld()->GetTimeSeconds();
 
-	// 좌우 소켓 스위칭 및 사격 시작점 설정
+	// 발사 지점 및 방향 설정
 	FName TargetSocketName = bIsNextShotLeft ? LeftMuzzleSocketName : RightMuzzleSocketName;
-	FVector Start = Mesh->GetSocketLocation(TargetSocketName);
+	FVector Start = OwnerChar->GetMesh()->GetSocketLocation(TargetSocketName);
+	FVector FireDir = GetFireDirection(Start);
 
-	FHitResult CursorHit;
-	bool bHitCursor = PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
-	FVector FireDir;
+	// 발사 피드백
+	PlayFireEffects(Start, TargetSocketName);
 
-	if (bHitCursor)
-	{
-		FVector TargetPoint = CursorHit.ImpactPoint;
-		TargetPoint.Z = Start.Z;
-
-		FVector BodyDir = (TargetPoint - OwnerChar->GetActorLocation());
-		BodyDir.Z = 0.f;
-		if (!BodyDir.IsNearlyZero())
-		{
-			// 몸은 이 방향으로만 고정
-			OwnerChar->SetActorRotation(BodyDir.GetSafeNormal().Rotation());
-		}
-
-		float DistToMouse = FVector::Dist2D(OwnerChar->GetActorLocation(), TargetPoint);
-		if (DistToMouse < 100.f)
-		{
-			FireDir = OwnerChar->GetActorForwardVector();
-		}
-		else
-		{
-			FireDir = (TargetPoint - Start).GetSafeNormal();
-		}
-	}
-	else
-	{
-		FireDir = OwnerChar->GetActorForwardVector();
-	}
-	
-	// PelletCount 만큼 라인트레이스 반복
+	// 탄환 판정
 	int32 TotalPellets = FMath::Max(1, CurrentStat->PelletCount);
-	bool bIsShotgun = (TotalPellets > 1);
-
 	for (int32 i = 0; i < TotalPellets; i++)
 	{
-		// 탄퍼짐 계산 (Cone 형태의 랜덤 방향 생성)
 		float SpreadRad = FMath::DegreesToRadians(CurrentStat->BulletSpread);
-		FVector SpreadDir = FMath::VRandCone(FireDir, SpreadRad);
-		FVector End = Start + (SpreadDir * CurrentStat->Range);
+		FVector End = Start + (FMath::VRandCone(FireDir, SpreadRad) * CurrentStat->Range);
 
-		// 사격 판정 (라인트레이스)
 		FHitResult Hit;
 		FCollisionQueryParams Params;
 		Params.AddIgnoredActor(OwnerChar);
-		bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
-		FVector FinalEnd = bHit ? Hit.ImpactPoint : End;
 
-		// 맞았을 때는 빨간색, 안 맞았을 때는 초록색으로 표시
-		FColor LineColor = bHit ? FColor::Red : FColor::Green;
-		DrawDebugLine(World, Start, FinalEnd, LineColor, false, 1.0f, 0, 0.5f);
+		// LineTrace 판정 및 ProcessHit 호출 (데미지/로그/히트마커 처리는 ProcessHit 내부에서 수행)
+		if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+		{
+			ProcessHit(Hit);
+		}
 
+		// 트레이서(궤적) 생성
 		if (CurrentStat->TracerEffect)
 		{
-			// 나이아가라 시스템 스폰
-			UParticleSystemComponent* Tracer = UGameplayStatics::SpawnEmitterAtLocation(
-				GetWorld(),
-				CurrentStat->TracerEffect,
-				Start,
-				(FinalEnd - Start).Rotation()
-			);
-
-			if (Tracer)
-			{
-				Tracer->SetVectorParameter(TEXT("Target"), FinalEnd);
-			}
-		}
-
-		if (bHit)
-		{
-			// 맞은 지점에 작은 구체 표시
-			DrawDebugSphere(World, Hit.ImpactPoint, 10.0f, 12, FColor::Red, false, 0.1f);
-			AActor* HitActor = Hit.GetActor();
-
-            if (HitActor && IsValid(HitActor)) // KH 260223 추가 : HitActor
-			{
-				if (CurrentStat->HitSound)
-				{
-					UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->HitSound, Hit.ImpactPoint);
-				}
-
-				IEnemy* Enemy = Cast<IEnemy>(HitActor);
-                if (Enemy)
-                {
-                    Enemy->TakeDamage(CurrentStat->Damage);
-                    UE_LOG(LogTemp, Log, TEXT("Enemy Hit! Damage: %f"), CurrentStat->Damage);
-
-                    if (PC) // KH 260223 추가 : 적을 맞췄을 때
-                    {
-                        if (ADevHHUD* DevHUD = Cast<ADevHHUD>(PC->GetHUD()))
-                        {
-                            if (UDevHCrosshairWidget* Crosshair = DevHUD->GetCrosshairWidget())
-                            {
-                                // 적을 맞춘 순간에만 애니메이션 실행
-                                Crosshair->PlayHitMarker();
-                            }
-                        }
-                    }
-                }
-				else
-				{
-					// 몬스터가 아닌 일반 사물(환경 등)일 경우 엔진 표준 데미지 적용
-					UGameplayStatics::ApplyDamage(
-						HitActor,
-						CurrentStat->Damage,
-						PC,
-						OwnerChar,
-						nullptr
-					);
-				}
-			}
-
-			if (CurrentStat->ImpactEffect)
-			{
-				UGameplayStatics::SpawnEmitterAtLocation(World, CurrentStat->ImpactEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
-			}
+			FVector FinalEnd = Hit.bBlockingHit ? Hit.ImpactPoint : End;
+			UParticleSystemComponent* Tracer = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), CurrentStat->TracerEffect, Start, (FinalEnd - Start).Rotation());
+			if (Tracer) Tracer->SetVectorParameter(TEXT("Target"), FinalEnd);
 		}
 	}
 
-	// 발사 피드백 (이펙트 & 사운드)
-	if (CurrentStat->MuzzleFlash)
-	{
-		UGameplayStatics::SpawnEmitterAttached(CurrentStat->MuzzleFlash, Mesh, TargetSocketName);
-	}
-
-	if (CurrentStat->FireSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->FireSound, Start);
-	}
-	// 사격 성공 후 시간 업데이트
-	LastFireTime = CurrentTime;
-
-	// 데이터 업데이트
+	// 5. 데이터 업데이트 및 로그
 	CurrentAmmo--;
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
+	LastFireTime = CurrentTime;
 	bIsNextShotLeft = !bIsNextShotLeft;
 
-    // KH 추가 : UI 서브시스템
-    if (UGameInstance* GI = GetWorld()->GetGameInstance())
-    {
-        if (UDevHUISubSystem* UISubSystem = GI->GetSubsystem<UDevHUISubSystem>())
-        {
-            // KH 추가 - 260223 : 공격이 발생했음을 알리고 쿨타임 전달
-            UISubSystem->BroadcastNormalAttack(CurrentStat->FireRate);
-            // 무기 타입, Ammo 개수 방송
-            UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
-        }
-    }
- 
+	UE_LOG(LogTemp, Log, TEXT("남은 탄약: %d / %d"), CurrentAmmo, CurrentStat->MaxAmmo);
+
+	// 6. KH 추가 : UI 서브시스템 방송 (원문 유지)
+	if (UGameInstance* GI = GetWorld()->GetGameInstance())
+	{
+		if (UDevHUISubSystem* UISubSystem = GI->GetSubsystem<UDevHUISubSystem>())
+		{
+			UISubSystem->BroadcastNormalAttack(CurrentStat->FireRate);
+			UISubSystem->BroadcastWeaponStatus(WeaponRowName.ToString(), CurrentAmmo, CurrentStat->MaxAmmo);
+		}
+	}
+
+	// 7. 탄약 소진 시 후처리
 	if (CurrentAmmo <= 0)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
 		StartReload();
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("Ammo: %d / %d"), CurrentAmmo, CurrentStat->MaxAmmo);
 }
 
 void UWeaponComponent::StartReload()
 {
-	if (bIsReloading || CurrentAmmo >= CurrentStat->MaxAmmo) return;
+	// 상태 체크 : 이미 장전 중이거나 무기 교체 중이면 무시
+	if (CurrentState == EWeaponState::Reloading || CurrentState == EWeaponState::Swapping) return;
+
+	// 탄약이 이미 꽉 찼다면 무시
+	if (CurrentAmmo >= CurrentStat->MaxAmmo) return;
+
+	// 상태 전환 : 장전 상태로 변경 (사격 등을 차단)
+	CurrentState = EWeaponState::Reloading;
 
     // KH 추가 - 260223 :  UI 서브시스템에 재장전 시간 방송
     if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
@@ -328,7 +229,6 @@ void UWeaponComponent::StartReload()
         UISub->BroadcastReload(CurrentStat->ReloadTime);
     }
 
-	bIsReloading = true;
 	// 장전 사운드 재생
 	if (CurrentStat->ReloadSound)
 	{
@@ -336,23 +236,26 @@ void UWeaponComponent::StartReload()
 		UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->ReloadSound, GetOwner()->GetActorLocation());
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Reloading..."), CurrentStat->ReloadTime);
+	UE_LOG(LogTemp, Log, TEXT("장전 중... 예상 시간: %f"), CurrentStat->ReloadTime);
 
 	// ReloadTime 후에 CompleteReload 함수를 호출하도록 타이머 설정
 	GetWorld()->GetTimerManager().SetTimer(
-		ReloadTimerHandle,
-		this,
-		&UWeaponComponent::CompleteReload,
-		CurrentStat->ReloadTime,
-		false
+			ReloadTimerHandle,
+			this,
+			&UWeaponComponent::CompleteReload,
+			CurrentStat->ReloadTime,
+			false
 	);
 }
 
 void UWeaponComponent::CompleteReload()
 {
+	// 데이터 업데이트
 	CurrentAmmo = CurrentStat->MaxAmmo;
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
-	bIsReloading = false;
+
+	// 상태 해제 : 다시 Idle 상태로 변경
+	CurrentState = EWeaponState::Idle;
 
     // UI 서브 시스템
     if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
@@ -363,7 +266,7 @@ void UWeaponComponent::CompleteReload()
 	float CurrentTime = GetWorld()->GetTimeSeconds();
 	LastFireTime = CurrentTime - CurrentStat->FireRate;
 
-	UE_LOG(LogTemp, Log, TEXT("Reload Complete"));
+	UE_LOG(LogTemp, Log, TEXT("장전 완료"));
 
 	// 장전이 끝났을 때 마우스를 여전히 누르고 있다면 사격 재개
 	if (bHoldingFire)
@@ -374,13 +277,17 @@ void UWeaponComponent::CompleteReload()
 
 void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
 {
-	if (bIsReloading || WeaponRowName == NewWeaponName)
+	// 상태 및 중복 체크
+	if (CurrentState == EWeaponState::Reloading || CurrentState == EWeaponState::Swapping || WeaponRowName == NewWeaponName)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("장전 중에는 무기를 바꿀 수 없거나 이미 같은 무기입니다."));
+		UE_LOG(LogTemp, Warning, TEXT("장전/교체 중에는 무기를 바꿀 수 없거나 이미 같은 무기입니다."));
 		return;
 	}
 
 	if (!WeaponStatTable) return;
+
+	// 무기 교체 상태로 전환
+	CurrentState = EWeaponState::Swapping;
 
 	// 현재 무기의 남은 탄약을 맵에 저장
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
@@ -394,6 +301,7 @@ void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
         if (GetCurrentScore() < NewStat->UnlockScore)
         {
             UE_LOG(LogTemp, Warning, TEXT("무기 잠김 상태: 해금 점수 부족!"));
+			CurrentState = EWeaponState::Idle;
             return;
         }
 
@@ -417,22 +325,28 @@ void UWeaponComponent::ChangeWeapon(FName NewWeaponName)
 		LastFireTime = CurrentTime;
 		LastWeaponSwitchTime = CurrentTime;
 
-		// 사격 중이었다면 타이머 초기화 (연사 속도가 다를 수 있으므로)
-		if (bHoldingFire)
-		{
-			StopFire();
+		// 지연 시간 후 상태 복구 로직
+		// 사격 중이었다면 중단 후 예약, 아니면 그냥 Idle로 복귀
+		if (bHoldingFire) StopFire();
 
-			// WeaponSwitchDelay만큼 기다린 후 StartFire를 다시 호출
-			GetWorld()->GetTimerManager().SetTimer(
-				FireTimerHandle,
-				this,
-				&UWeaponComponent::StartFire,
-				WeaponSwitchDelay,
-				false
-			);
-		}
+		FTimerHandle SwapTimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(
+			SwapTimerHandle,
+			[this]()
+			{
+				if (!IsValid(this)) return;
+				CurrentState = EWeaponState::Idle;
+				UE_LOG(LogTemp, Log, TEXT("무기 교체 완료 : Idle 상태로 복귀"));
 
-		UE_LOG(LogTemp, Log, TEXT("Weapon Switched to: %s"), *NewWeaponName.ToString());
+				// 마우스를 계속 누르고 있었다면 사격 재개
+				if (bHoldingFire)
+				{
+					StartFire();
+				}
+			},
+			WeaponSwitchDelay,
+			false
+		);
 
         // KH 추가 : 성공적으로 교체되었을 때만 UI 방송
         if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
@@ -491,7 +405,7 @@ void UWeaponComponent::LaunchGrenade()
 	float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (CurrentTime - LastGrenadeTime < Stat->CooldownTime)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Grenade on Cooldown Remaining: %.1f"),
+		UE_LOG(LogTemp, Warning, TEXT("수류탄 재사용 대기 시간 : %.1f"),
 			Stat->CooldownTime - (CurrentTime - LastGrenadeTime));
 		return;
 	}
@@ -629,5 +543,94 @@ void UWeaponComponent::RegenerateGrenade()
 		CurrentGrenadeCount = Stat->MaxCharges;
 		GetWorld()->GetTimerManager().ClearTimer(GrenadeRegenTimerHandle);
 		UE_LOG(LogTemp, Log, TEXT("수류탄 충전 완료."));
+	}
+}
+
+bool UWeaponComponent::CanFire() const
+{
+	// 상태 체크
+	// Idle이거나 이미 사격 중(Firing)일 때만 추가 발사 가능
+	if (CurrentState != EWeaponState::Idle && CurrentState != EWeaponState::Firing) return false;
+
+	// 기본 스탯 및 탄약 체크
+	if (!CurrentStat || CurrentAmmo <= 0) return false;
+
+	// 점수 해금 체크
+	if (GetCurrentScore() < CurrentStat->UnlockScore) return false;
+
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	// 무기 교체 지연 및 연사 속도 체크
+	if (CurrentTime - LastWeaponSwitchTime < WeaponSwitchDelay) return false;
+	if (CurrentTime - LastFireTime < CurrentStat->FireRate * 0.8f) return false;
+
+	return true;
+}
+
+FVector UWeaponComponent::GetFireDirection(const FVector& StartPos) const
+{
+	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
+	APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController());
+
+	FHitResult CursorHit;
+	if (PC && PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit))
+	{
+		FVector TargetPoint = CursorHit.ImpactPoint;
+		TargetPoint.Z = StartPos.Z; // 높이 보정
+
+		// 캐릭터 회전 처리
+		FVector BodyDir = (TargetPoint - OwnerChar->GetActorLocation());
+		BodyDir.Z = 0.f;
+		if (!BodyDir.IsNearlyZero()) OwnerChar->SetActorRotation(BodyDir.GetSafeNormal().Rotation());
+
+		// 너무 가까운 곳 클릭 시 정면 발사, 멀면 타겟 방향
+		float Dist = FVector::Dist2D(OwnerChar->GetActorLocation(), TargetPoint);
+		return (Dist < 100.f) ? OwnerChar->GetActorForwardVector() : (TargetPoint - StartPos).GetSafeNormal();
+	}
+	return OwnerChar->GetActorForwardVector();
+}
+
+void UWeaponComponent::ProcessHit(const FHitResult& Hit)
+{
+	AActor* HitActor = Hit.GetActor();
+	if (!HitActor || !IsValid(HitActor)) return;
+
+	// 시각/청각 효과
+	if (CurrentStat->HitSound) UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->HitSound, Hit.ImpactPoint);
+	if (CurrentStat->ImpactEffect) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), CurrentStat->ImpactEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+
+	// 데미지 적용 및 UI 피드백 (인터페이스 활용)
+	if (IEnemy* Enemy = Cast<IEnemy>(HitActor))
+	{
+		Enemy->TakeDamage(CurrentStat->Damage);
+		UE_LOG(LogTemp, Log, TEXT("몬스터 타격 Damage : %f"), CurrentStat->Damage);
+		// KH 추가 : 히트마커 애니메이션
+		APlayerController* PC = Cast<APlayerController>(Cast<ACharacter>(GetOwner())->GetController());
+		if (PC)
+		{
+			if (ADevHHUD* DevHUD = Cast<ADevHHUD>(PC->GetHUD()))
+			{
+				if (UDevHCrosshairWidget* Crosshair = DevHUD->GetCrosshairWidget())
+				{
+					Crosshair->PlayHitMarker();
+				}
+			}
+		}
+	}
+	else
+	{
+		// 일반 사물 데미지
+		UGameplayStatics::ApplyDamage(HitActor, CurrentStat->Damage, nullptr, GetOwner(), nullptr);
+	}
+}
+
+void UWeaponComponent::PlayFireEffects(const FVector& StartPos, const FName& SocketName)
+{
+	if (CurrentStat->MuzzleFlash)
+	{
+		UGameplayStatics::SpawnEmitterAttached(CurrentStat->MuzzleFlash, Cast<ACharacter>(GetOwner())->GetMesh(), SocketName);
+	}
+	if (CurrentStat->FireSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->FireSound, StartPos);
 	}
 }

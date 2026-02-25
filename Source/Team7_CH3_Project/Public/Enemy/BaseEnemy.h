@@ -59,12 +59,15 @@ protected:
     bool bIsAlive = true;
     UPROPERTY(VisibleAnywhere, Category = "Enemy|Stats")
     bool bIsActive = true;
+    UPROPERTY(VisibleAnywhere, Category = "Enemy|Stats")
+    bool bIsAiming = true;
 
-    // Scaling Factors (Kept for LoadData logic)
     float HealthIncStage;
     float HealthIncWave;
     float DamageIncStage;
     float DamageIncWave;
+    float RewardIncStage;
+    float RewardIncWave;
 
     // =========================================================================
     // COMBAT (ICombatEntity)
@@ -96,6 +99,8 @@ protected:
     float RangeProjectileGravity;
     UPROPERTY(VisibleAnywhere, Category = "Enemy|Combat|Range")
     float RangeProjectileAOE;
+
+    FVector SavedTargetLoc;
 
     // =========================================================================
     // MOVEMENT & AI (IAIBehavior)
@@ -145,6 +150,7 @@ public:
     virtual float GetAttackRange() const override { return AttackRange; }
     virtual float GetAttackCooldown() const override { return AttackCooldown; }
     virtual float GetZDifferenceAllowed() const override { return ZDifferenceAllowed; }
+    virtual bool IsAiming() const override { return bIsAiming; }
     virtual void ExecuteAction(int32 ActionID) override;
 
     // --- IAIBehavior Implementation ---
@@ -154,6 +160,8 @@ public:
     virtual float GetMovespeed() const override { return Movespeed; }
 
     // --- Internal calls ---
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
+    void ExecuteAimDone();
     UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
     void ExecuteAttackPoint();
 

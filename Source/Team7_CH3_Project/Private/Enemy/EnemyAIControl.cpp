@@ -26,7 +26,14 @@ void AEnemyAIControl::UpdateAct()
 {
     if (StatsInterface && (!StatsInterface->IsAlive() || !StatsInterface->IsActive()))
     {
-        SetState(EEnemyState::Dead);
+        if (StatsInterface->IsActive())
+        {
+            SetState(EEnemyState::Dead);
+        }
+        else
+        {
+            SetState(EEnemyState::Idle);
+        }
         GetWorldTimerManager().ClearTimer(AITimer);
         StopMovement();
         return;
@@ -126,8 +133,6 @@ void AEnemyAIControl::HandleChasing(AActor* Target)
 
 void AEnemyAIControl::HandleAttacking(AActor* Target)
 {
-    SetFocus(Target);
-
     if (CombatInterface->IsAttackReady())
     {
         StopMovement();
@@ -137,7 +142,14 @@ void AEnemyAIControl::HandleAttacking(AActor* Target)
 
 void AEnemyAIControl::HandleWaiting(AActor* Target)
 {
-    ClearFocus(EAIFocusPriority::Gameplay);
+    if (CombatInterface->IsAiming())
+    {
+        SetFocus(Target);
+    }
+    else
+    {
+        ClearFocus(EAIFocusPriority::Gameplay);
+    }
     StopMovement();
 }
 

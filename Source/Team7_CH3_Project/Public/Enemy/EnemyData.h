@@ -28,7 +28,9 @@ public:
         WaveHealthInc(0.05f),
         StageHealthInc(0.2f),
         WaveDamageInc(0.03f),
-        StageDamageInc(0.15f)
+        StageDamageInc(0.15f),
+        WaveRewardInc(0.25f),
+        StageRewardInc(1.0f)
     {
     }
 
@@ -74,6 +76,10 @@ public:
     float WaveDamageInc;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
     float StageDamageInc;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float WaveRewardInc;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float StageRewardInc;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Object")
     TSubclassOf<AEnemyProjectile> ProjectileObj;

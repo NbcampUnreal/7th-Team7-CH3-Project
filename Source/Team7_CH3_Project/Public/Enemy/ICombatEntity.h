@@ -30,5 +30,6 @@ public:
     virtual float GetAttackCooldown() const = 0;
     virtual float GetZDifferenceAllowed() const = 0;
 
+    virtual bool IsAiming() const = 0;
     virtual void ExecuteAction(int32 ActionID) = 0;
 };

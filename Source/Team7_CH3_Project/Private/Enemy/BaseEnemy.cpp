@@ -48,6 +48,8 @@ void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
         HealthIncWave = EnemyData->WaveHealthInc;
         DamageIncStage = EnemyData->StageDamageInc;
         DamageIncWave = EnemyData->WaveDamageInc;
+        RewardIncStage = EnemyData->StageRewardInc;
+        RewardIncWave = EnemyData->WaveRewardInc;
 
         HealthMax = EnemyData->HealthMax * (1 + (HealthIncStage * StageCount) + (HealthIncWave * WaveCount));
         Health = HealthMax;
@@ -205,6 +207,7 @@ bool ABaseEnemy::HasLineOfSight() const
 
 void ABaseEnemy::ExecuteAttackAnimation()
 {
+    bIsAiming = true;
     if (AttackMontage)
     {
         PlayAnimMontage(AttackMontage);
@@ -216,6 +219,15 @@ void ABaseEnemy::ExecuteActionAnimation()
     // No action for base enemy.
 }
 
+void ABaseEnemy::ExecuteAimDone()
+{
+    bIsAiming = false;
+
+    AActor* Target = GetTarget();
+    if (!Target) return;
+    SavedTargetLoc = Target->GetActorLocation();
+}
+
 void ABaseEnemy::ExecuteAttackPoint()
 {
     if (EnemyType == EAttackType::Ranged && ProjectileObj)
@@ -224,7 +236,7 @@ void ABaseEnemy::ExecuteAttackPoint()
         if (!Target) return;
 
         FVector SpawnLocation = GetMesh()->GetSocketLocation(MuzzleName);
-        FVector TargetLocation = Target->GetActorLocation();
+        FVector TargetLocation = SavedTargetLoc;
 
         float TargetHalfHeight = 0.0f;
         ACharacter* TargetChar = Cast<ACharacter>(Target);
@@ -299,7 +311,7 @@ void ABaseEnemy::ExecuteAttackPoint()
         if (Target && GetDistanceTo(Target) <= AttackRange)
         {
             FVector Forward = GetActorForwardVector();
-            FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+            FVector ToTarget = (SavedTargetLoc - GetActorLocation()).GetSafeNormal();
             float DotProduct = FVector::DotProduct(Forward, ToTarget);
             float AngleThreshold = FMath::Cos(FMath::DegreesToRadians(MeleeAttackAngle * 0.5f));
 

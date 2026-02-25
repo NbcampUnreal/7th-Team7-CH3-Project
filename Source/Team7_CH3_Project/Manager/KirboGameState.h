@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,12 +6,15 @@
 #include "GameFramework/GameStateBase.h"
 #include "KirboGameState.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class TEAM7_CH3_PROJECT_API AKirboGameState : public AGameStateBase
 {
 	GENERATED_BODY()
-	
+
+public:
+	int CurrentStageScore = 0;
+	int CurrentKills = 0;
+	int CurrentWave = 1;
+
+	void UpdateScoreAndKills(int ScoreAmount);
 };

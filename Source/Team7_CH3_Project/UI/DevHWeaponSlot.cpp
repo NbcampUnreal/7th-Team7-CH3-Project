@@ -37,9 +37,9 @@ void UDevHWeaponSlot::UnlockStatus(int32 CurrentScore)
 	if (Border_Lock)
 	{
 		// 현재 점수가 해금 점수보다 높으면 해금
-		bool bIsUnLocked = CurrentScore >= CachedUnlockScore;
+		bIsUnlocked = CurrentScore >= CachedUnlockScore;
 
-		if (CachedUnlockScore > 0 && bIsUnLocked && Border_Lock->GetVisibility() == ESlateVisibility::Visible)
+		if (CachedUnlockScore > 0 && bIsUnlocked && Border_Lock->GetVisibility() == ESlateVisibility::Visible)
 		{
 			if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
 			{
@@ -47,17 +47,17 @@ void UDevHWeaponSlot::UnlockStatus(int32 CurrentScore)
 			}
 		}
 
-		Border_Lock->SetVisibility(bIsUnLocked ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+		Border_Lock->SetVisibility(bIsUnlocked ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 	}
 }
 
 void UDevHWeaponSlot::SetSlotActive(bool bIsActive)
 {
-	int32 CurrentScore = 0;
-	if (CurrentScore < CachedUnlockScore)
-	{
-		return; // 해금X 무기
-	}
+    // 미리 저장된 해금 상태만 확인
+    if (!bIsUnlocked)
+    {
+        return;
+    }
 
 	if (Image_Frame)
 	{
@@ -65,7 +65,4 @@ void UDevHWeaponSlot::SetSlotActive(bool bIsActive)
 		FLinearColor TargetColor = bIsActive ? SelectedFrameColor : DefaultFrameColor;
 		Image_Frame->SetBrushTintColor(FSlateColor(TargetColor));
 	}
-	// 선택된 슬롯 연출
-	// float Scale = bIsActive ? 1.15f : 1.0f;
-	// SetRenderScale(FVector2D(Scale, Scale));
 }

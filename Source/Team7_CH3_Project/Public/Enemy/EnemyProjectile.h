@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Particles/ParticleSystem.h"
 #include "EnemyProjectile.generated.h"
 
 UCLASS()
@@ -19,6 +20,7 @@ protected:
 
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
+    virtual void Destroyed() override;
 
     UPROPERTY(VisibleAnywhere, Category = "Components")
     class USphereComponent* CollisionComponent;
@@ -34,6 +36,12 @@ protected:
 private:
     FVector SpawnLocation;
     float MaxRange;
+    bool isHitted = false;
+
+    UParticleSystem* EffectHitGround;
+    float EffectHitGroundSize;
+    UParticleSystem* EffectHitPlayer;
+    float EffectHitPlayerSize;
 
     UFUNCTION()
     void OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
@@ -43,4 +51,5 @@ private:
 
 public:
     void InitializeProjectile(float Speed, float Damage, float Range, float GravityScale = 0.0f, float AOERadius = 0.0f);
+    void InitializeEffects(UParticleSystem* HitGround, float HitGroundSize, UParticleSystem* HitPlayer, float HitPlayerSize);
 };

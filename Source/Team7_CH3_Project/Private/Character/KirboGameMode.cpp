@@ -4,9 +4,18 @@
 #include "Character/KirboGameMode.h"
 #include "Character/KirboCharacter.h"
 #include "Character/KirboPlayerController.h"
+#include "Team7_CH3_Project/Manager/KirboGameState.h"
 
 AKirboGameMode::AKirboGameMode()
 {
 	DefaultPawnClass = AKirboCharacter::StaticClass();
 	PlayerControllerClass = AKirboPlayerController::StaticClass();
+}
+
+void AKirboGameMode::OnEnemyKilled(int ScoreDrop)
+{
+	if (AKirboGameState* KGS = GetGameState<AKirboGameState>())
+	{
+		KGS->UpdateScoreAndKills(ScoreDrop);
+	}
 }

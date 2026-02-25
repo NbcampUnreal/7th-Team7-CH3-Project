@@ -39,4 +39,6 @@ public:
     void ResetFeedbackColor();
     UFUNCTION()
     void TriggerGrenadeRegenUI(float Delay);
+    UFUNCTION()
+    void TriggerNormalReloadUI(float Delay);
 };

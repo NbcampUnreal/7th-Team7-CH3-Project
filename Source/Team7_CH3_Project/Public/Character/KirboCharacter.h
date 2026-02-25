@@ -88,4 +88,7 @@ public:
 
 	void UpdateStamina(float CurrentStamina, float MaxStamina);
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+    
+    void TestSelfDamage(); // KH 260224 추가 : 플로팅 텍스트 테스트용 함수 선언
 };

@@ -17,7 +17,7 @@ void UAttackStatus::NativeConstruct()
             UISub->OnSkillCooldownTriggered.AddDynamic(this, &UAttackStatus::TriggerSkillUI);
 
             // 재장전 신호가 오면 일반 공격 슬롯 UI를 실행
-            UISub->OnReloadTriggered.AddDynamic(this, &UAttackStatus::TriggerNormalAttackUI);
+            UISub->OnReloadTriggered.AddDynamic(this, &UAttackStatus::TriggerNormalReloadUI);
             // 수류탄 충전 신호가 오면 스킬 슬롯 게이지 작동
             UISub->OnGrenadeRegenTriggered.AddDynamic(this, &UAttackStatus::TriggerGrenadeRegenUI);
         }
@@ -36,6 +36,16 @@ void UAttackStatus::TriggerNormalAttackUI(float Delay)
     if (WBP_AttackSlot_Normal)
     {
         WBP_AttackSlot_Normal->SetFeedbackColor(NormalHighlightColor);
+        WBP_AttackSlot_Normal->StartDelay(Delay);
+    }
+}
+
+void UAttackStatus::TriggerNormalReloadUI(float Delay)
+{
+    if (WBP_AttackSlot_Normal)
+    {
+        // 재장전 중 기본 흰색(원래 컬러)으로 복구
+        WBP_AttackSlot_Normal->SetFeedbackColor(FLinearColor::White);
         WBP_AttackSlot_Normal->StartDelay(Delay);
     }
 }
@@ -61,6 +71,9 @@ void UAttackStatus::TriggerGrenadeRegenUI(float Delay)
 {
     if (WBP_AttackSlot_Skill)
     {
+        // 리젠 시작 시 프레임 강조를 제거
+        WBP_AttackSlot_Skill->SetFeedbackColor(FLinearColor::White);
+
         // 30초 리젠 시간 - 프로그레스 바 게이지를 돌리는 데 사용
         WBP_AttackSlot_Skill->StartDelay(Delay);
     }

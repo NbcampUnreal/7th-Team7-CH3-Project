@@ -1,11 +1,14 @@
 ﻿#pragma once
+//MonsterSpawner.h
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/DataTable.h"
-#include "MonsterWaveRow.h"
-#include "Enemy/BaseEnemy.h"
+#include "Engine/DataTable.h" // ✅ UDataTable 사용
 #include "MonsterSpawner.generated.h"
+
+// Forward Declaration
+class UWaveManager;
 
 UCLASS()
 class TEAM7_CH3_PROJECT_API AMonsterSpawner : public AActor
@@ -13,34 +16,37 @@ class TEAM7_CH3_PROJECT_API AMonsterSpawner : public AActor
     GENERATED_BODY()
 
 public:
-    AMonsterSpawner();
 
-protected:
+    static int32 CurrentStage;
+
+    AMonsterSpawner();
     virtual void BeginPlay() override;
 
-public:
+    /** NavMesh 기반 랜덤 위치 반환 */
+    bool GetRandomNavMeshLocation(FVector& OutLocation);
+
+    /** Debug: 현재 스테이지 반환 */
+    int32 GetCurrentStage() const { return StageNumber; }
+
+    /** Debug: 현재 웨이브 반환 */
+    int32 GetCurrentWave() const;
+
     UPROPERTY(EditAnywhere, Category = "Wave")
     UDataTable* WaveDataTable;
 
-    UPROPERTY(EditAnywhere, Category = "Spawn")
-    float SpawnRadius = 2000.f;
+    UPROPERTY(EditAnywhere, Category = "Wave")
+    int32 StageNumber;
 
-    UPROPERTY(EditAnywhere, Category = "Spawn")
-    FVector SpawnCenter;
+    UPROPERTY(EditAnywhere, Category = "Wave")
+    float SpawnRadius = 500.f;
+
+    UPROPERTY(EditAnywhere, Category = "Wave")
+    bool bAutoStart = true;
+
+    UPROPERTY(EditAnywhere, Category = "Wave")
+    AActor* LinkedNavMesh;
 
 private:
-    int32 CurrentWave = 1;
-    int32 AliveEnemyCount = 0;
-
-    void StartWave(int32 WaveNumber);
-    void StartNextWave();
-
-    void SpawnSingleEnemy(
-        TSubclassOf<ABaseEnemy> EnemyClass);
-
-    bool GetRandomNavMeshLocation(
-        FVector& OutLocation);
-
-    UFUNCTION()
-    void HandleEnemyDestroyed(AActor* DestroyedActor);
+    UPROPERTY()
+    UWaveManager* WaveManager;
 };

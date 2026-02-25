@@ -3,6 +3,7 @@
 #include "DevHGameResultWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Team7_CH3_Project/UI/GameLogTypes.h"
+#include "Team7_CH3_Project/Public/Character/KirboPlayerController.h"
 
 
 void ADevHHUD::BeginPlay()
@@ -44,6 +45,12 @@ void ADevHHUD::BeginPlay()
 
 void ADevHHUD::HandleGameResult(bool bIsClear)
 {
+    // 기존 크로스헤어 위젯 숨기기 또는 제거
+    if (CrosshairInstance)
+    {
+        CrosshairInstance->RemoveFromParent();
+    }
+
     if (ResultWidgetInstance) // 중복 생성 방지: 이미 있으면 내용만 업데이트
     {
         ResultWidgetInstance->SetupResultUI(bIsClear);
@@ -59,6 +66,12 @@ void ADevHHUD::HandleGameResult(bool bIsClear)
             ResultWidgetInstance->AddToViewport();
             ResultWidgetInstance->SetupResultUI(bIsClear);
         }
+    }
+
+    // 결과창 뜨면 컨트롤러의 입력 모드를 전환
+    if (AKirboPlayerController* PC = Cast<AKirboPlayerController>(GetOwningPlayerController()))
+    {
+        PC->SwitchToResultUIInput(ResultWidgetInstance);
     }
 }
 

@@ -72,8 +72,8 @@ void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
 		Movespeed = EnemyData->Movespeed;
 		GetCharacterMovement()->MaxWalkSpeed = Movespeed;
 
-		GoldRaward = EnemyData->GoldRaward;
-		ScoreRaward = EnemyData->ScoreRaward;
+		GoldRaward = EnemyData->GoldRaward * (1 + (RewardIncStage * StageCount) + (RewardIncWave * WaveCount));
+		ScoreRaward = EnemyData->ScoreRaward * (1 + (RewardIncStage * StageCount) + (RewardIncWave * WaveCount));
 
 		bIsAlive = true;
 

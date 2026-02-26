@@ -20,7 +20,7 @@ void UDevHStageWave::NativeConstruct()
         if (AKirboGameState* GS = GetWorld()->GetGameState<AKirboGameState>())
         {
             // 첫 킬 전에도 데이터 올바르게 표시
-            UpdateHUD(1, GS->CurrentWave, GS->CurrentKills, GS->CurrentStageScore);
+            UpdateHUD(GS->CurrentStageIndex, GS->CurrentWaveIndex, GS->CurrentKills, GS->CurrentScore);
         }
     }
 

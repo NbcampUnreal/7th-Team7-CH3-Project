@@ -43,6 +43,9 @@ private:
     UParticleSystem* EffectHitPlayer;
     float EffectHitPlayerSize;
 
+    USoundBase* ImpactSound;
+    float ImpactSoundMultiplier;
+
     UFUNCTION()
     void OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
@@ -52,4 +55,5 @@ private:
 public:
     void InitializeProjectile(float Speed, float Damage, float Range, float GravityScale = 0.0f, float AOERadius = 0.0f);
     void InitializeEffects(UParticleSystem* HitGround, float HitGroundSize, UParticleSystem* HitPlayer, float HitPlayerSize);
+    void InitializeSounds(USoundBase* Sound, float SoundMultiplier);
 };

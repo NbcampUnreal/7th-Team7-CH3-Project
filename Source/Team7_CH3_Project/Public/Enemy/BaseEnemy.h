@@ -40,9 +40,6 @@ protected:
 	UDataTable* DataTable;
 
 	UPROPERTY(EditAnywhere, Category = "Enemy|Data")
-	class UEnemyObjectData* EnemyObjectData;
-
-	UPROPERTY(EditAnywhere, Category = "Enemy|Data")
 	FString EnemyName = "BaseEnemy";
 
 	// =========================================================================
@@ -142,6 +139,19 @@ protected:
 	UParticleSystem* HitPlayerEffect;
 	float HitPlayerEffectSize;
 
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets|Sounds")
+	USoundBase* AttackSound;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets|Sounds")
+	float AttackSoundMultiplier;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets|Sounds")
+	USoundBase* ImpactSound;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets|Sounds")
+	float ImpactSoundMultiplier;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets|Sounds")
+	TArray<USoundBase*> DeadSound;
+	UPROPERTY(VisibleAnywhere, Category = "Enemy|Assets|Sounds")
+	float DeadSoundMultiplier;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
 	UEnemyHealthBarComponent* HealthBarComp;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|UI")
@@ -184,6 +194,8 @@ public:
 	// --- Internal calls ---
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
 	void ExecuteAimDone();
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
+	void ExecuteMeleeSound();
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
 	void ExecuteAttackPoint();
 

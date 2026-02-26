@@ -87,6 +87,11 @@ void AEnemyProjectile::InitializeEffects(UParticleSystem* HitGround, float HitGr
     EffectHitPlayer = HitPlayer;
     EffectHitPlayerSize = HitPlayerSize;
 }
+void AEnemyProjectile::InitializeSounds(USoundBase* Sound, float SoundMultiplier)
+{
+    ImpactSound = Sound;
+    ImpactSoundMultiplier = SoundMultiplier;
+}
 
 void AEnemyProjectile::OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
@@ -144,5 +149,9 @@ void AEnemyProjectile::Explode(AActor* HitActor)
     }
 
     isHitted = true;
+    if (ImpactSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, GetActorLocation(), ImpactSoundMultiplier);
+    }
     Destroy();
 }

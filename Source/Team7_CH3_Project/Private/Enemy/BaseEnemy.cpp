@@ -5,7 +5,6 @@
 #include "Enemy/EnemyData.h"
 #include "Enemy/EnemyAIControl.h"
 #include "Enemy/EnemyProjectile.h"
-#include "Enemy/EnemyObjectData.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/CapsuleComponent.h"
@@ -68,6 +67,13 @@ void ABaseEnemy::LoadData(int32 StageCount, int32 WaveCount)
 		RangeProjectileSpeed = EnemyData->RangeProjectileSpeed;
 		RangeProjectileGravity = EnemyData->RangeProjectileGravity;
 		RangeProjectileAOE = EnemyData->RangeProjectileAOE;
+
+		AttackSound = EnemyData->AttackSound;
+		AttackSoundMultiplier = EnemyData->AttackSoundMultiplier;
+		ImpactSound = EnemyData->ImpactSound;
+		ImpactSoundMultiplier = EnemyData->ImpactSoundMultiplier;
+		DeadSound = EnemyData->DeadSound;
+		DeadSoundMultiplier = EnemyData->DeadSoundMultiplier;
 
 		Movespeed = EnemyData->Movespeed;
 		GetCharacterMovement()->MaxWalkSpeed = Movespeed;
@@ -172,6 +178,11 @@ void ABaseEnemy::Die()
 		Destroy();
 	}
 
+	int32 RandPlay = FMath::RandRange(0, DeadSound.Num() - 1);
+	if (DeadSound[RandPlay])
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), DeadSound[RandPlay], GetActorLocation(), DeadSoundMultiplier);
+	}
 	SetLifeSpan(10.0f);
 }
 
@@ -265,6 +276,13 @@ void ABaseEnemy::ExecuteAimDone()
 	if (!Target) return;
 	SavedTargetLoc = Target->GetActorLocation();
 }
+void ABaseEnemy::ExecuteMeleeSound()
+{
+	if (EnemyType == EAttackType::Melee && AttackSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSound, GetActorLocation(), AttackSoundMultiplier);
+	}
+}
 
 void ABaseEnemy::ExecuteAttackPoint()
 {
@@ -342,10 +360,15 @@ void ABaseEnemy::ExecuteAttackPoint()
 			float LifeRange = (FinalGravityScale > 0.0f) ? (AttackRange * 8.0f) : (AttackRange * 1.5f);
 			Bullet->InitializeProjectile(RangeProjectileSpeed, Damage, LifeRange, FinalGravityScale, RangeProjectileAOE);
 			Bullet->InitializeEffects(HitGroundEffect, HitGroundEffectSize, HitPlayerEffect, HitPlayerEffectSize);
+			Bullet->InitializeSounds(ImpactSound, ImpactSoundMultiplier);
 		}
 
 		FRotator MuzzleRotation = GetMesh()->GetSocketRotation(MuzzleName);
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleEffect, SpawnLocation, MuzzleRotation, FVector::One() * MuzzleEffectSize, true);
+		if (AttackSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSound, GetActorLocation(), AttackSoundMultiplier);
+		}
 	}
 	else if (EnemyType == EAttackType::Melee)
 	{
@@ -360,6 +383,10 @@ void ABaseEnemy::ExecuteAttackPoint()
 			if (DotProduct >= AngleThreshold)
 			{
 				UGameplayStatics::ApplyDamage(Target, Damage, GetController(), this, UDamageType::StaticClass());
+				if (ImpactSound)
+				{
+					UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, Target->GetActorLocation(), ImpactSoundMultiplier);
+				}
 			}
 		}
 	}

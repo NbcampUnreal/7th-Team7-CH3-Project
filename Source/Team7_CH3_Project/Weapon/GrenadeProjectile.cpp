@@ -13,10 +13,8 @@
 #include "Enemy/IEntityStats.h"
 #include "DrawDebugHelpers.h"
 
-// Sets default values
 AGrenadeProjectile::AGrenadeProjectile()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
 	// 충돌체 생성 및 루트 설정
@@ -26,6 +24,7 @@ AGrenadeProjectile::AGrenadeProjectile()
 	// 콜리전 설정 (발사체 표준)
 	SphereComp->InitSphereRadius(15.0f);
 	SphereComp->SetCollisionProfileName(TEXT("Projectile"));
+	SphereComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
 
 	// 외형(Mesh) 생성 및 부착
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
@@ -89,122 +88,93 @@ void AGrenadeProjectile::Explode()
 
 	FVector Start = GetActorLocation();
 
+
+	// 시각/청각 효과
+	if (ExplosionEffect) UGameplayStatics::SpawnEmitterAtLocation(World, ExplosionEffect, Start, GetActorRotation());
+	if (ExplosionSound) UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, Start);
+
+	// 몬스터 감지 및 데미지 전달
+	TArray<FHitResult> HitResults;
+	FCollisionShape SphereShape = FCollisionShape::MakeSphere(ExplosionRadius);
+	float DamageRange = ExplosionRadius - InnerRadius;
+	if (DamageRange <= 0.0f) DamageRange = 1.0f;
+
+	bool bHasOverlap = World->SweepMultiByChannel(
+		HitResults, Start, Start, FQuat::Identity,
+		ECC_Pawn,
+		SphereShape);
+
+	if (bHasOverlap)
+	{
+		TArray<AActor*> DamagedActors;
+
+		for (const FHitResult& Hit : HitResults)
+		{
+			AActor* HitActor = Hit.GetActor();
+			if (HitActor && !DamagedActors.Contains(HitActor) && HitActor != GetOwner())
+			{
+				// 인터페이스 캐스팅
+				IEntityStats* Enemy = Cast<IEntityStats>(HitActor);
+				if (Enemy)
+				{
+					float Distance = FVector::Dist(Start, HitActor->GetActorLocation());
+
+					// 거리별 데미지 보간 계산
+					float Alpha = FMath::Clamp((ExplosionRadius - Distance) / DamageRange, 0.0f, 1.0f);
+					float FinalDamage = FMath::Lerp(MinDamage, MaxDamage, Alpha);
+
+					// 인터페이스 함수 호출
+					Enemy->TakeDamage(FinalDamage);
+					DamagedActors.Add(HitActor);
+				}
+
+				// 물리 효과 (WorldDynamic이고 시뮬레이션 중인 경우)
+				if (UPrimitiveComponent* HitComp = Hit.GetComponent())
+				{
+					if (HitComp->IsSimulatingPhysics())
+					{
+						HitComp->AddRadialImpulse(Start, ExplosionRadius, ImpulseStrength, RIF_Linear, true);
+					}
+				}
+			}
+		}
+	}
+
+	// 물리적인 밀쳐내기 효과 추가
+	HitResults.Empty(); // 기존 결과 비우기
+	if (World->SweepMultiByChannel(HitResults, Start, Start, FQuat::Identity, ECC_WorldDynamic, SphereShape))
+	{
+		for (const FHitResult& Hit : HitResults)
+		{
+			if (UPrimitiveComponent* HitComp = Hit.GetComponent())
+			{
+				if (HitComp->IsSimulatingPhysics())
+				{
+					HitComp->AddRadialImpulse(Start, ExplosionRadius, ImpulseStrength, RIF_Linear, true);
+				}
+			}
+		}
+	}
+
+	// 데칼 생성
 	if (ExplosionDecal)
 	{
-		// 폭발 지점에서 아래 방향으로 레이를 쏴서 지면 확인
 		FHitResult GroundHit;
 		FVector TraceEnd = Start + (FVector::DownVector * 500.f);
-
 		FCollisionQueryParams Params;
 		Params.AddIgnoredActor(this);
 		if (GetOwner()) Params.AddIgnoredActor(GetOwner());
 
 		if (World->LineTraceSingleByChannel(GroundHit, Start, TraceEnd, ECC_Visibility, Params))
 		{
-			FVector DecalSize(ExplosionRadius, ExplosionRadius, ExplosionRadius);
-			// SpawnDecalAtLocation(World, Material, Size, Location, Rotation, LifeSpan)
-			// 지면의 노멀(Normal) 방향에 맞춰 데칼을 생성
-			UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(
-				World,
-				ExplosionDecal,
-				DecalSize,
-				GroundHit.ImpactPoint,
-				GroundHit.ImpactNormal.Rotation(),
-				10.0f // 10초 후 소멸
-			);
-			if (Decal)
-			{
-				// 서서히 사라지는 페이드 효과 (선택 사항)
-				Decal->SetFadeOut(8.0f, 2.0f);
-			}
-		}
-	}
-
-	// 순간 광원(Flash Light) 효과
-	// 언리얼에서 전용 액터를 스폰하거나, 임시 컴포넌트를 생성합니다.
-	UPointLightComponent* FlashLight = NewObject<UPointLightComponent>(this);
-	if (FlashLight)
-	{
-		FlashLight->RegisterComponent();
-		FlashLight->SetWorldLocation(Start);
-		FlashLight->SetIntensity(FlashIntensity);
-		FlashLight->SetLightColor(FlashColor);
-		FlashLight->SetAttenuationRadius(ExplosionRadius * 1.5f); // 폭발 범위보다 조금 더 넓게
-
-		// 아주 짧은 시간(0.1초) 뒤에 불빛 제거
-		FTimerHandle LightTimer;
-		World->GetTimerManager().SetTimer(LightTimer, [FlashLight]() {
-			if (FlashLight && FlashLight->IsValidLowLevel())
-			{
-				FlashLight->DestroyComponent();
-			}
-			}, 0.1f, false);
-	}
-	if (ExplosionEffect)
-	{
-		UGameplayStatics::SpawnEmitterAtLocation(World, ExplosionEffect, GetActorLocation(), GetActorRotation());
-	}
-
-	if (ExplosionSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
-	}
-	// 물리적인 밀쳐내기 효과 추가
-	TArray<FHitResult> HitResults;
-	FCollisionShape SphereShape = FCollisionShape::MakeSphere(ExplosionRadius);
-
-	// 주변의 물리 컴포넌트들을 찾기
-	bool bHasOverlap = World->SweepMultiByChannel(
-		HitResults, Start, Start, FQuat::Identity,
-		ECC_WorldDynamic, SphereShape);
-
-	if (bHasOverlap)
-	{
-		TArray<AActor*> DamagedActors;
-		float DamageRange = ExplosionRadius - InnerRadius;
-		if (DamageRange <= 0.0f) DamageRange = 1.0f;
-
-		for (const FHitResult& Hit : HitResults)
-		{
-			AActor* HitActor = Hit.GetActor();
-			UPrimitiveComponent* HitComp = Hit.GetComponent();
-
-			if (HitActor && !DamagedActors.Contains(HitActor))
-			{
-				IEntityStats* Enemy = Cast<IEntityStats>(HitActor);
-				if (Enemy)
-				{
-					float Distance = FVector::Dist(Start, HitActor->GetActorLocation());
-
-					// MinDamage를 활용한 거리별 데미지 보간 (InnerRadius 고려)
-					// Distance가 InnerRadius보다 작으면 MaxDamage, ExplosionRadius에 가까워지면 MinDamage로 보간
-					float Alpha = FMath::Clamp((ExplosionRadius - Distance) / DamageRange, 0.0f, 1.0f);
-					float FinalDamage = FMath::Lerp(MinDamage, MaxDamage, Alpha);
-
-					Enemy->TakeDamage(FinalDamage);
-					DamagedActors.Add(HitActor);
-				}
-			}
-			// 물리 시뮬레이션 중인 컴포넌트에만 힘을 가함
-			if (HitComp && HitComp->IsSimulatingPhysics())
-			{
-				// AddRadialImpulse: 중심점에서 바깥쪽으로 힘을 전달
-				HitComp->AddRadialImpulse(Start, ExplosionRadius, ImpulseStrength, RIF_Linear, true);
-			}
+			UGameplayStatics::SpawnDecalAtLocation(World, ExplosionDecal, FVector(ExplosionRadius), GroundHit.ImpactPoint, GroundHit.ImpactNormal.Rotation(), 10.0f);
 		}
 	}
 
 	// 카메라 쉐이크 실행
 	if (ExplosionCameraShake)
 	{
-		UGameplayStatics::PlayWorldCameraShake(
-			World,
-			ExplosionCameraShake,
-			GetActorLocation(),
-			0.f,               // Inner Radius (최대 흔들림 범위)
-			ExplosionRadius * 2.f, // Outer Radius (흔들림이 멈추는 범위)
-			1.f                // Falloff (거리에 따른 감쇄)
-		);
+		UGameplayStatics::PlayWorldCameraShake(World, ExplosionCameraShake, Start, 0.f, ExplosionRadius * 2.f);
 	}
 
 	// 시각적 디버깅 (범위 확인용)

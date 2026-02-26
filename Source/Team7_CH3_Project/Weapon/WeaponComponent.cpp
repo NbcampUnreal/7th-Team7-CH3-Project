@@ -568,25 +568,34 @@ bool UWeaponComponent::CanFire() const
 
 FVector UWeaponComponent::GetFireDirection(const FVector& StartPos) const
 {
-	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
-	APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController());
+	APlayerController* PC = Cast<APlayerController>(Cast<ACharacter>(GetOwner())->GetController());
+	if (!PC) return GetOwner()->GetActorForwardVector();
 
-	FHitResult CursorHit;
-	if (PC && PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit))
+	FVector WorldLocation, WorldDirection;
+	if (PC->DeprojectMousePositionToWorld(WorldLocation, WorldDirection))
 	{
-		FVector TargetPoint = CursorHit.ImpactPoint;
-		TargetPoint.Z = StartPos.Z; // 높이 보정
+		// 기준 평면을 바닥(Z=0)으로 설정 (시체/장애물 무시)
+		float GroundZ = 0.f;
+		if (FMath::IsNearlyZero(WorldDirection.Z)) return GetOwner()->GetActorForwardVector();
 
-		// 캐릭터 회전 처리
-		FVector BodyDir = (TargetPoint - OwnerChar->GetActorLocation());
-		BodyDir.Z = 0.f;
-		if (!BodyDir.IsNearlyZero()) OwnerChar->SetActorRotation(BodyDir.GetSafeNormal().Rotation());
+		// 평면 교차 공식: t = (PlaneZ - RayOrigin.Z) / RayDirection.Z
+		float t = (GroundZ - WorldLocation.Z) / WorldDirection.Z;
 
-		// 너무 가까운 곳 클릭 시 정면 발사, 멀면 타겟 방향
-		float Dist = FVector::Dist2D(OwnerChar->GetActorLocation(), TargetPoint);
-		return (Dist < 100.f) ? OwnerChar->GetActorForwardVector() : (TargetPoint - StartPos).GetSafeNormal();
+		if (t > 0)
+		{
+			// 마우스가 가리키는 바닥의 정확한 3D 지점
+			FVector GroundPoint = WorldLocation + (WorldDirection * t);
+
+			// 현재 총구에서 바닥 지점을 바라보는 방향 계산
+			FVector Direction = (GroundPoint - StartPos).GetSafeNormal();
+
+			// 수평 유지
+			Direction.Z = 0.f;
+
+			return Direction.GetSafeNormal();
+		}
 	}
-	return OwnerChar->GetActorForwardVector();
+	return GetOwner()->GetActorForwardVector();
 }
 
 void UWeaponComponent::ProcessHit(const FHitResult& Hit)

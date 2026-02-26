@@ -13,11 +13,13 @@ class TEAM7_CH3_PROJECT_API AStageSpawner : public AActor
 	GENERATED_BODY()
 
 public:
-    void SpawnWave(FEnemyWaveData WaveData);
+    void InputStageIndex(int32 StageIndexInput);
+    void SpawnWave(int32 WaveIndex, FEnemyWaveData WaveData);
 
     void OnEnemyDestroyed();
 
 private:
+    int32 StageIndex = 0;
     int32 RemainingEnemiesInWave = 0;
 
     FVector GetRandomNavLocation();

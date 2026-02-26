@@ -3,14 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
-#include "Stages/StageData.h"
+#include "GameFramework/GameState.h"
 #include "KirboGameState.generated.h"
 
+class UKirboGameInstance;
+class UDevHUISubSystem;
 class AStageSpawner;
+struct FStageData;
 
 UCLASS()
-class TEAM7_CH3_PROJECT_API AKirboGameState : public AGameStateBase
+class TEAM7_CH3_PROJECT_API AKirboGameState : public AGameState
 {
 	GENERATED_BODY()
 
@@ -26,13 +28,14 @@ public:
 
 	void UpdateScoreAndKills(int ScoreAmount);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StageData")
 	UDataTable* StageDataTable;
-	UPROPERTY(BlueprintReadWrite, Category = "Spawning")
 	AStageSpawner* LevelSpawner;
 
+	UKirboGameInstance* GI;
+	UDevHUISubSystem* UISystem;
 	FStageData* CurrentStageData;
 
+	void UpdateUI();
 	void StartStage();
 	void NextWave();
 	void OnWaveCleared();

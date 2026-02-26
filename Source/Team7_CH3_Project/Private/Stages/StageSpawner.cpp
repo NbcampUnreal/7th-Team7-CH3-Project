@@ -3,10 +3,16 @@
 
 #include "Stages/StageSpawner.h"
 #include "NavigationSystem.h"
+#include "Enemy/IEntityStats.h"
 #include "Team7_CH3_Project/Manager/KirboGameState.h"
 #include "Kismet/GameplayStatics.h"
 
-void AStageSpawner::SpawnWave(FEnemyWaveData WaveData)
+void AStageSpawner::InputStageIndex(int32 StageIndexInput)
+{
+    StageIndex = StageIndexInput;
+}
+
+void AStageSpawner::SpawnWave(int32 WaveIndex, FEnemyWaveData WaveData)
 {
     RemainingEnemiesInWave = 0;
     for (const FEnemySpawnData& Data : WaveData.SpawnEnemies)
@@ -25,8 +31,12 @@ void AStageSpawner::SpawnWave(FEnemyWaveData WaveData)
             AActor* SpawnedEnemy = GetWorld()->SpawnActor<AActor>(Data.EnemyBlueprint, SpawnLocation, FRotator::ZeroRotator);
             if (SpawnedEnemy)
             {
-                RemainingEnemiesInWave++;
-                // call IEntityStats LoadData here.
+                IEntityStats* Enemy = Cast<IEntityStats>(SpawnedEnemy);
+                if (Enemy)
+                {
+                    RemainingEnemiesInWave++;
+                    Enemy->LoadData(StageIndex, WaveIndex);
+                }
             }
         }
     }

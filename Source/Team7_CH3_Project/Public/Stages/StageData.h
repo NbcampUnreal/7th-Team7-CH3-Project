@@ -31,12 +31,14 @@ struct FStageData : public FTableRowBase
     GENERATED_BODY()
 
 public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LevelData")
+    FName LevelName;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StageData")
     float StageStartDelay;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StageData")
-    float WavesDelay;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StageData")
     float StageEndDelay;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WaveData")
+    float WavesDelay;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WaveData")
     TArray<FEnemyWaveData> SpawnWaves;
 };

@@ -35,6 +35,8 @@ void AKirboPlayerController::PlayerTick(float DeltaTime)
 // KH 260223 추가 : 크로스헤어 구현
 void AKirboPlayerController::UpdateCrosshair()
 {
+    if (bIsGameOver) return; // 게임 오버 상태라면 더 이상 크로스헤어를 따라오게 하지 않음
+
     ADevHHUD* HUDPtr = Cast<ADevHHUD>(GetHUD());
     if (!HUDPtr || !HUDPtr->GetCrosshairWidget()) return;
 
@@ -51,4 +53,24 @@ void AKirboPlayerController::UpdateCrosshair()
         HUDPtr->GetCrosshairWidget()->SetTargetingColor(bIsEnemy);
         HUDPtr->GetCrosshairWidget()->SetPositionInViewport(MousePosition);
     }
+}
+
+void AKirboPlayerController::SwitchToResultUIInput(UUserWidget* FocusWidget)
+{
+    bIsGameOver = true; // 크로스헤어 업데이트 중단 플래그
+
+    // 커서 모양을 다시 기본으로 복구
+    CurrentMouseCursor = EMouseCursor::Default;
+    bShowMouseCursor = true;
+
+    // 입력 모드를 UI 전용으로 변경
+    FInputModeUIOnly InputMode;
+    if (FocusWidget)
+    {
+        // 결과창 위젯에 포커스를 주어 버튼 호버/클릭이 즉시 작동하게 함
+        InputMode.SetWidgetToFocus(FocusWidget->TakeWidget());
+    }
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+    SetInputMode(InputMode);
 }

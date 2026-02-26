@@ -3,6 +3,7 @@
 #include "DevHUISubSystem.h"
 #include "Components/TextBlock.h"
 #include "Team7_CH3_Project/Public/Character/KirboStatComponent.h"
+#include "Kismet/KismetMathLibrary.h" // FMath 사용을 위해 확인
 
 
 void UDevHHealthBarWidget::NativeConstruct()
@@ -30,26 +31,51 @@ void UDevHHealthBarWidget::NativeConstruct()
     {
         if (APawn* Pawn = PC->GetPawn())
         {
-            // 캐릭터에서 스탯 컴포넌트를 찾아 직접 값을 가져옵니다.
-            // (컴포넌트 헤더 포함 필요)
+            // 캐릭터에서 스탯 컴포넌트를 찾아 직접 값을 가져옴
             if (UKirboStatComponent* Stat = Pawn->FindComponentByClass<UKirboStatComponent>())
             {
+                float InitialPercent = (Stat->BaseStat.MaxHP > 0) ? (Stat->CurrentHP / Stat->BaseStat.MaxHP) : 1.0f;
+                CurrentPercent = InitialPercent;
+                TargetPercent = InitialPercent;
+
+                if (HealthBar)
+                {
+                    HealthBar->SetPercent(CurrentPercent);
+                }
+
                 UpdateHealthBar(Stat->CurrentHP, Stat->BaseStat.MaxHP);
             }
         }
     }
 }
 
+void UDevHHealthBarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    // 현재 퍼센트가 목표 퍼센트와 다르다면 보간 진행
+    if (!FMath::IsNearlyEqual(CurrentPercent, TargetPercent, 0.0001f))
+    {
+        // FInterpTo : 현재값에서 목표값으로 DeltaTime에 맞춰 부드럽게 이동
+        CurrentPercent = FMath::FInterpTo(CurrentPercent, TargetPercent, InDeltaTime, InterpSpeed);
+
+        // 계산된 현재 퍼센트를 프로그래스 바에 적용
+        if (HealthBar)
+        {
+            HealthBar->SetPercent(CurrentPercent);
+        }
+    }
+}
+
 void UDevHHealthBarWidget::UpdateHealthBar(float CurrentHP, float MaxHP)
 {
-    // 1. 프로그래스 바 업데이트
+    // 프로그래스 바 업데이트
     if (HealthBar && MaxHP > 0.0f)
     {
-        float HealthPercent = CurrentHP / MaxHP;
-        HealthBar->SetPercent(FMath::Clamp(HealthPercent, 0.0f, 1.0f)); // 0.0 ~ 1.0 사이로 값 고정!
+        TargetPercent = FMath::Clamp(CurrentHP / MaxHP, 0.0f, 1.0f);
     }
 
-    // 2. 텍스트 블록 업데이트
+    // 텍스트 블록 업데이트
     if (TextBlock_Health && !HealthFormat.IsEmpty())
     {
         FFormatNamedArguments Args;

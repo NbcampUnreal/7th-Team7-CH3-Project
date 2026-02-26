@@ -1,5 +1,5 @@
 ﻿#pragma once
-
+//MonsterWaveRow.h
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "MonsterWaveRow.generated.h"
@@ -15,6 +15,9 @@ struct FMonsterSpawnInfo
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     int32 Count = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    int32 StageID = 1;  // 1, 2, 3 등
 };
 
 USTRUCT(BlueprintType)

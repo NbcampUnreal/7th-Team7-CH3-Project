@@ -13,6 +13,7 @@
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h" // KH 추가 : UI
 #include "Team7_CH3_Project/UI/DevHHUD.h" // KH 추가 : UI
 #include "Team7_CH3_Project/UI/DevHCrosshairWidget.h" // KH 추가 : UI
+#include "Team7_CH3_Project/UI/DevHHUD.h" // KH 260225 추가 : 로그
 
 UWeaponComponent::UWeaponComponent()
 {
@@ -253,6 +254,12 @@ void UWeaponComponent::CompleteReload()
 	// 데이터 업데이트
 	CurrentAmmo = CurrentStat->MaxAmmo;
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
+
+    // KH 260225 추가 : 재장전 시 로그
+    if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
+    {
+        HUD->AddGameLog(FName("Weapon_Reload"));
+    }
 
 	// 상태 해제 : 다시 Idle 상태로 변경
 	CurrentState = EWeaponState::Idle;
@@ -523,6 +530,12 @@ void UWeaponComponent::RegenerateGrenade()
 	// 개수 증가
 	CurrentGrenadeCount++;
 	UE_LOG(LogTemp, Log, TEXT("수류탄 1개 충전됨 현재 개수 : %d / %d"), CurrentGrenadeCount, Stat->MaxCharges);
+
+    // KH 260225 추가 : 수류탄 충전 시 로그
+    if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
+    {
+        HUD->AddGameLog(FName("Grenade_Regen"));
+    }
 
     // KH 추가 - 260223 : 아직 최대치가 아니라면 다음 충전 시간 UI 방송
     if (UDevHUISubSystem* UISub = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())

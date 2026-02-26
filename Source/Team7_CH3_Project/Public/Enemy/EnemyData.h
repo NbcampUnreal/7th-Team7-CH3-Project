@@ -6,7 +6,30 @@
 #include "Engine/DataTable.h"
 #include "Enemy/ICombatEntity.h"
 #include "Enemy/EnemyProjectile.h"
+#include "Particles/ParticleSystem.h"
 #include "EnemyData.generated.h"
+
+USTRUCT(BlueprintType)
+struct FEnemyRangeObjectData
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    TSubclassOf<AEnemyProjectile> ProjectileObj;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* MuzzleEffect;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float MuzzleEffectSize;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* HitEffectGround;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float HitEffectGroundSize;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* HitEffectPlayer;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float HitEffectPlayerSize;
+};
 
 USTRUCT(BlueprintType)
 struct FEnemyData : public FTableRowBase
@@ -25,6 +48,8 @@ public:
         RangeProjectileSpeed(1500.0f),
         RangeProjectileGravity(0.0f),
         RangeProjectileAOE(0.0f),
+        GoldRaward(20),
+        ScoreRaward(20),
         WaveHealthInc(0.05f),
         StageHealthInc(0.2f),
         WaveDamageInc(0.03f),
@@ -68,6 +93,11 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Ranged")
     float RangeProjectileAOE;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+    float GoldRaward;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+    float ScoreRaward;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
     float WaveHealthInc;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
@@ -81,6 +111,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
     float StageRewardInc;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Object")
-    TSubclassOf<AEnemyProjectile> ProjectileObj;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectData")
+    FEnemyRangeObjectData ProjectileData;
 };

@@ -47,17 +47,19 @@ protected:
 	FTimerHandle DashTimerHandle;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	float DashCooldownTime = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	UAnimMontage* DeathMontage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	bool bIsDead = false;
+
+	FTimerHandle InvincibilityTimerHandle;
+
+	bool bIsInvincible = false; // 무적 상태 확인
 	bool bCanDash = true;
 	bool bIsShooting = false;
 	bool bIsControlEnabled = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	UAnimMontage* HitMontage;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	UAnimMontage* DeathMontage;
-	bool bIsDead = false;
-	bool bIsInvincible = false; // 무적 상태 확인
-	FTimerHandle InvincibilityTimerHandle;
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -88,7 +90,5 @@ public:
 
 	void UpdateStamina(float CurrentStamina, float MaxStamina);
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-
-    
-    void TestSelfDamage(); // KH 260224 추가 : 플로팅 텍스트 테스트용 함수 선언
+	void TestSelfDamage(); // KH 260224 추가 : 플로팅 텍스트 테스트용 함수 선언
 };

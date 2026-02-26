@@ -1,5 +1,6 @@
 ﻿#include "DevHStageWave.h"
 #include "DevHUISubSystem.h"
+#include "Team7_CH3_Project/Manager/KirboGameState.h"
 
 void UDevHStageWave::NativeConstruct()
 {
@@ -14,6 +15,13 @@ void UDevHStageWave::NativeConstruct()
     {
         // 데이터 변할 때마다 UpdateHUD 호출
         UISub->OnHUDDataChanged.AddDynamic(this, &UDevHStageWave::UpdateHUD);
+
+        // 초기 UI 값 설정
+        if (AKirboGameState* GS = GetWorld()->GetGameState<AKirboGameState>())
+        {
+            // 첫 킬 전에도 데이터 올바르게 표시
+            UpdateHUD(1, GS->CurrentWave, GS->CurrentKills, GS->CurrentStageScore);
+        }
     }
 
 }

@@ -55,7 +55,10 @@ public:
         WaveDamageInc(0.03f),
         StageDamageInc(0.15f),
         WaveRewardInc(0.25f),
-        StageRewardInc(1.0f)
+        StageRewardInc(1.0f),
+        AttackSoundMultiplier(1.0f),
+        ImpactSoundMultiplier(1.0f),
+        DeadSoundMultiplier(1.0f)
     {
     }
 
@@ -113,4 +116,17 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectData")
     FEnemyRangeObjectData ProjectileData;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    USoundBase* AttackSound;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    float AttackSoundMultiplier;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    USoundBase* ImpactSound;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    float ImpactSoundMultiplier;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    TArray<USoundBase*> DeadSound;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    float DeadSoundMultiplier;
 };

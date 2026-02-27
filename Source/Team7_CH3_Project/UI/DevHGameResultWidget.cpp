@@ -8,12 +8,12 @@ void UDevHGameResultWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    if (RestartButton) // 1. 시작 버튼 연결
+    if (RestartButton) // 시작 버튼 연결
     {
         RestartButton->OnMyClicked.AddDynamic(this, &UDevHGameResultWidget::OnRestartGame);
     }
 
-    if (ExitButton) // 2. 나가기 버튼 연결
+    if (ExitButton) // 나가기 버튼 연결
     {
         ExitButton->OnMyClicked.AddDynamic(this, &UDevHGameResultWidget::OnExitGame);
     }

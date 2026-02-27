@@ -479,6 +479,15 @@ void UWeaponComponent::LaunchGrenade()
 
 			if (Projectile)
 			{
+				UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(Projectile->GetRootComponent());
+				if (RootPrimitive)
+				{
+					RootPrimitive->SetCollisionObjectType(ECC_PhysicsBody);
+
+					// 몬스터(Pawn) 채널에 대해 'Block' 응답을 하도록 설정
+					RootPrimitive->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+				}
+
 				Projectile->MaxDamage = Stat->MaxDamage;
 				Projectile->MinDamage = Stat->MinDamage;
 				Projectile->InnerRadius = Stat->InnerRadius;
@@ -496,7 +505,8 @@ void UWeaponComponent::LaunchGrenade()
 				UProjectileMovementComponent* Movement = Projectile->FindComponentByClass<UProjectileMovementComponent>();
 				if (Movement)
 				{
-					Movement->Velocity = OwnerChar->GetActorForwardVector() * Stat->LaunchForce;
+					FVector LaunchDir = GetFireDirection(SpawnLocation);
+					Movement->Velocity = LaunchDir * Stat->LaunchForce;
 				}
 			}
 

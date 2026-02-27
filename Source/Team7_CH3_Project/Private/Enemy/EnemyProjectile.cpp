@@ -41,8 +41,6 @@ void AEnemyProjectile::BeginPlay()
     Tags.Add(FName("EnemyProjectile"));
 
     SpawnLocation = GetActorLocation();
-    CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &AEnemyProjectile::OnProjectileOverlap);
-    CollisionComponent->SetNotifyRigidBodyCollision(true);
 }
 
 void AEnemyProjectile::Tick(float DeltaTime)

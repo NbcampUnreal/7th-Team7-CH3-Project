@@ -141,11 +141,6 @@ void ABaseEnemy::Die()
 		GM->OnEnemyKilled(FMath::RoundToInt(ScoreRaward));
 	}
 
-	if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
-	{
-		HUD->AddGameLog(FName("Kill_Enemy"));
-	}
-
 	if (AEnemyAIControl* AICont = Cast<AEnemyAIControl>(GetController()))
 	{
 		AICont->StopMovement();

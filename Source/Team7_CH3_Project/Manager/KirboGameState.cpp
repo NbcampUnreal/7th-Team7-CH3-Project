@@ -7,6 +7,7 @@
 #include "Stages/StageSpawner.h"
 #include "Kismet/GameplayStatics.h"
 #include "Team7_CH3_Project/UI/DevHUISubSystem.h"
+#include "Team7_CH3_Project/UI/DevHHUD.h"
 
 void AKirboGameState::BeginPlay()
 {
@@ -43,6 +44,15 @@ void AKirboGameState::BeginPlay()
         FTimerHandle UpdateUIHandle;
         GetWorldTimerManager().SetTimer(UpdateUIHandle, this, &AKirboGameState::UpdateUI, 0.25f, false);
     }
+
+    // 레벨 진입 로그 - HUD 생성 시간을 고려해 0.5초 뒤 한 번만 실행
+    FTimerHandle LogHandle;
+    GetWorldTimerManager().SetTimer(LogHandle, FTimerDelegate::CreateLambda([this]()
+        {
+            if (CurrentStageIndex == 0)
+                BroadcastLog(FName("Game_Start"));
+                BroadcastLog(FName("Stage_Next"));
+        }), 0.5f, false);
 }
 
 
@@ -50,6 +60,8 @@ void AKirboGameState::UpdateScoreAndKills(int ScoreAmount)
 {
 	CurrentScore += ScoreAmount;
 	CurrentKills++;
+    
+    BroadcastLog(FName("Kill_Enemy")); // 처치 로그 즉시 호출
 
     if (UISystem)
     {
@@ -99,11 +111,15 @@ void AKirboGameState::NextWave()
 {
     if (CurrentStageData && LevelSpawner && CurrentStageData->SpawnWaves.IsValidIndex(CurrentWaveIndex))
     {
+        
+        BroadcastLog(FName("Wave_Start")); // 웨이브 시작 로그 추가
         LevelSpawner->SpawnWave(CurrentWaveIndex, CurrentStageData->SpawnWaves[CurrentWaveIndex]);
     }
 }
 void AKirboGameState::OnWaveCleared()
 {
+    BroadcastLog(FName("Wave_End")); // 웨이브 종료 로그 출력
+
     CurrentWaveIndex++;
     if (CurrentStageData && CurrentWaveIndex < CurrentStageData->SpawnWaves.Num())
     {
@@ -140,4 +156,16 @@ void AKirboGameState::OnStageCleared()
         }
     }
 
+    BroadcastLog(FName("Stage_End"));
+}
+
+void AKirboGameState::BroadcastLog(FName LogRowName)
+{
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        if (ADevHHUD* HUD = Cast<ADevHHUD>(PC->GetHUD()))
+        {
+            HUD->AddGameLog(LogRowName);
+        }
+    }
 }

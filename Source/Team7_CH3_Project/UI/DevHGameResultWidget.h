@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "DevHButton.h"
+#include "Components/TextBlock.h"
 #include "DevHGameResultWidget.generated.h"
 
 UCLASS()
@@ -32,6 +33,15 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Config")
     FName LevelToLoad = FName("L_MainMenu"); /*레벨 교체 시 수정*/
+
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* ScoreText; // 점수 텍스트 블록
+
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* KillCountText; // 킬 수 텍스트 블록
+
+    UPROPERTY(Transient, meta = (BindWidgetAnim))
+    class UWidgetAnimation* IntroAnim;
 
 protected:
     virtual void NativeConstruct() override;

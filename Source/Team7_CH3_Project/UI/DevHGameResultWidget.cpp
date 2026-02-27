@@ -2,6 +2,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Components/TextBlock.h"
+#include "Team7_CH3_Project/Manager/KirboGameState.h"
 
 
 void UDevHGameResultWidget::NativeConstruct()
@@ -51,5 +52,25 @@ void UDevHGameResultWidget::SetupResultUI(bool bIsClear)
 
             RestartButton->SetVisibility(ESlateVisibility::Visible);
         }
+    }
+
+    if (AKirboGameState* GS = GetWorld()->GetGameState<AKirboGameState>())
+    {
+        // 점수 텍스트 업데이트
+        if (ScoreText)
+        {
+            ScoreText->SetText(FText::AsNumber(GS->CurrentScore));
+        }
+
+        if (KillCountText)
+        {
+            KillCountText->SetText(FText::AsNumber(GS->CurrentKills));
+        }
+    }
+
+    // 등장 애니메이션 재생
+    if (IntroAnim)
+    {
+        PlayAnimation(IntroAnim);
     }
 }

@@ -4,6 +4,7 @@
 #include "KirboGameInstance.h"
 #include "Stages/StageData.h"
 #include "Kismet/GameplayStatics.h"
+#include "Team7_CH3_Project/UI/DevHUISubSystem.h"
 
 void UKirboGameInstance::StartGame()
 {
@@ -32,6 +33,25 @@ void UKirboGameInstance::GameClear()
 {
     UE_LOG(LogTemp, Log, TEXT("-----All stage and wave finished! Here we can input clear functions from other class maybe?-----"));
     // Algorithm about game finished mechanism - or call it from other script
+
+    // UI 서브시스템에 클리어 신호를 보냄
+    if (UDevHUISubSystem* UISub = GetSubsystem<UDevHUISubSystem>())
+    {
+        UISub->OnGameResultChanged.Broadcast(true); // true = Clear
+    }
+
+    UGameplayStatics::SetGamePaused(GetWorld(), true); // 게임 일시정지
+}
+
+void UKirboGameInstance::GameOver()
+{
+    // UI 서브시스템에 클리어 신호를 보냄
+    if (UDevHUISubSystem* UISub = GetSubsystem<UDevHUISubSystem>())
+    {
+        UISub->OnGameResultChanged.Broadcast(false); // false = Fail
+    }
+
+    UGameplayStatics::SetGamePaused(GetWorld(), true); // 게임 일시정지
 }
 
 void UKirboGameInstance::AddScore(int32 AddedScores)

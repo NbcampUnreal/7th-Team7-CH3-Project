@@ -49,23 +49,24 @@ void ADevHHUD::HandleGameResult(bool bIsClear)
     if (CrosshairInstance)
     {
         CrosshairInstance->RemoveFromParent();
+        CrosshairInstance = nullptr;
     }
 
-    if (ResultWidgetInstance) // 중복 생성 방지: 이미 있으면 내용만 업데이트
+    // 결과창 생성 또는 업데이트
+    if (!ResultWidgetInstance && ResultWidgetClass)
     {
-        ResultWidgetInstance->SetupResultUI(bIsClear);
-        return;
+        ResultWidgetInstance = CreateWidget<UDevHGameResultWidget>(GetOwningPlayerController(), ResultWidgetClass);
     }
 
-    if (ResultWidgetClass) // 위젯 생성 및 출력
+    if (ResultWidgetInstance)
     {
-        ResultWidgetInstance = CreateWidget<UDevHGameResultWidget>(
-            GetOwningPlayerController(), ResultWidgetClass);
-        if (ResultWidgetInstance)
+        if (!ResultWidgetInstance->IsInViewport())
         {
             ResultWidgetInstance->AddToViewport();
-            ResultWidgetInstance->SetupResultUI(bIsClear);
         }
+
+        // 승리/패배 여부에 따라 텍스트와 컬러 세팅
+        ResultWidgetInstance->SetupResultUI(bIsClear);
     }
 
     // 결과창 뜨면 컨트롤러의 입력 모드를 전환

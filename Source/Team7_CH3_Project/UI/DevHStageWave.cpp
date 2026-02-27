@@ -28,7 +28,7 @@ void UDevHStageWave::NativeConstruct()
 
 void UDevHStageWave::UpdateHUD(int32 Stage, int32 Wave, int32 Kills, int32 Score)
 {
-    if (StageWaveText && !StageWaveFormat.IsEmpty()) // 1. Stage & Wave 업데이트
+    if (StageWaveText && !StageWaveFormat.IsEmpty()) // Stage & Wave 업데이트
     {
         FFormatNamedArguments Args;
         Args.Add(TEXT("Stage"), Stage); // {Stage} 부분 데이터 매칭
@@ -38,7 +38,7 @@ void UDevHStageWave::UpdateHUD(int32 Stage, int32 Wave, int32 Kills, int32 Score
         StageWaveText->SetText(FText::Format(StageWaveFormat, Args));
     }
 
-    if (KillsCountText && !KillsCountFormat.IsEmpty()) // 2. Kills Count 업데이트
+    if (KillsCountText && !KillsCountFormat.IsEmpty()) // Kills Count 업데이트
     {
         FFormatNamedArguments Args;
         Args.Add(TEXT("Kills"), Kills);
@@ -46,7 +46,7 @@ void UDevHStageWave::UpdateHUD(int32 Stage, int32 Wave, int32 Kills, int32 Score
         KillsCountText->SetText(FText::Format(KillsCountFormat, Args));
     }
 
-    if (ScoreText && !ScoreFormat.IsEmpty()) // 3. Score 업데이트
+    if (ScoreText && !ScoreFormat.IsEmpty()) // Score 업데이트
     {
         FFormatNamedArguments Args;
         Args.Add(TEXT("Score"), Score);

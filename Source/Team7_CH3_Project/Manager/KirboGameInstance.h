@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Blueprint/UserWidget.h" // 위젯
 #include "KirboGameInstance.generated.h"
 
 UCLASS()
@@ -14,6 +15,9 @@ class TEAM7_CH3_PROJECT_API UKirboGameInstance : public UGameInstance
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LevelData")
 	UDataTable* StageDataTable;
+ 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<UUserWidget> ResultWidgetClass;
 
 	int32 CurrentStageIndex = 0;
 	int32 TotalScore = 0;
@@ -26,6 +30,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GameFlow")
 	void GameClear();
+    UFUNCTION(BlueprintCallable, Category = "GameFlow")
+    void GameOver();
 
 	UFUNCTION(BlueprintCallable, Category = "GameFlow")
 	void AddScore(int32 AddedScores);

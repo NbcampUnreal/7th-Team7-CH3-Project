@@ -129,13 +129,13 @@ void UWeaponComponent::Fire()
 	// 사격 가능 상태 검증
 	if (!CanFire())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
-		if (CurrentState == EWeaponState::Firing)
+		if (CurrentAmmo <= 0)
 		{
-			CurrentState = EWeaponState::Idle;
+			GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+			if (CurrentState == EWeaponState::Firing) CurrentState = EWeaponState::Idle;
+			StartReload();
 		}
 
-		if (CurrentAmmo <= 0) StartReload();
 		return;
 	}
 
@@ -158,7 +158,6 @@ void UWeaponComponent::Fire()
 		{
 			// 몽타주 재생 (이미 재생 중이면 리셋됨)
 			OwnerChar->PlayAnimMontage(CurrentStat->FireMontage);
-
 			// bIsNextShotLeft 값에 따라 Fire_L 또는 Fire_R 섹션으로 점프
 			FName SectionName = bIsNextShotLeft ? FName("Fire_L") : FName("Fire_R");
 			AnimInstance->Montage_JumpToSection(SectionName, CurrentStat->FireMontage);
@@ -196,7 +195,16 @@ void UWeaponComponent::Fire()
 		if (CurrentStat->TracerEffect)
 		{
 			FVector FinalEnd = Hit.bBlockingHit ? Hit.ImpactPoint : End;
-			UParticleSystemComponent* Tracer = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), CurrentStat->TracerEffect, Start, (FinalEnd - Start).Rotation());
+
+			UParticleSystemComponent* Tracer = UGameplayStatics::SpawnEmitterAttached(
+				CurrentStat->TracerEffect,
+				OwnerChar->GetMesh(),
+				TargetSocketName,
+				FVector::ZeroVector,
+				FRotator::ZeroRotator,
+				EAttachLocation::SnapToTarget
+			);
+
 			if (Tracer) Tracer->SetVectorParameter(TEXT("Target"), FinalEnd);
 		}
 	}
@@ -437,10 +445,6 @@ void UWeaponComponent::LaunchGrenade()
 	if (Stat->GrenadeMontage)
 	{
 		OwnerChar->PlayAnimMontage(Stat->GrenadeMontage);
-
-		// 주의: 애니메이션 노티파이를 사용할 예정이므로 여기서 ExecuteLaunch를 호출하지 않습니다.
-		// 만약 노티파이 없이 즉시 테스트하려면 아래 줄을 주석 해제하세요.
-		// ExecuteLaunch(); 
 	}
 	else
 	{
@@ -537,7 +541,17 @@ void UWeaponComponent::ExecuteLaunch()
 
 		// 5. 발사 피드백 (사운드 및 이펙트)
 		if (Stat->LaunchSound) UGameplayStatics::PlaySoundAtLocation(World, Stat->LaunchSound, SpawnLocation);
-		if (Stat->MuzzleFlash) UGameplayStatics::SpawnEmitterAtLocation(World, Stat->MuzzleFlash, SpawnLocation, SpawnRotation);
+		if (Stat->MuzzleFlash)
+		{
+			UGameplayStatics::SpawnEmitterAttached(
+				Stat->MuzzleFlash,
+				OwnerChar->GetMesh(),
+				TEXT("grenade_front"),
+				FVector::ZeroVector,
+				FRotator::ZeroRotator,
+				EAttachLocation::SnapToTarget
+			);
+		}
 		if (Stat->FireCameraShake)
 		{
 			if (APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController()))
@@ -691,10 +705,21 @@ void UWeaponComponent::ProcessHit(const FHitResult& Hit)
 
 void UWeaponComponent::PlayFireEffects(const FVector& StartPos, const FName& SocketName)
 {
+	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
+	if (!OwnerChar || !OwnerChar->GetMesh()) return;
+
 	if (CurrentStat->MuzzleFlash)
 	{
-		UGameplayStatics::SpawnEmitterAttached(CurrentStat->MuzzleFlash, Cast<ACharacter>(GetOwner())->GetMesh(), SocketName);
+		UGameplayStatics::SpawnEmitterAttached(
+			CurrentStat->MuzzleFlash,
+			OwnerChar->GetMesh(),
+			SocketName,
+			FVector::ZeroVector,
+			FRotator::ZeroRotator,
+			EAttachLocation::SnapToTarget // 소켓에 딱 붙임
+		);
 	}
+
 	if (CurrentStat->FireSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CurrentStat->FireSound, StartPos);

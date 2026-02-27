@@ -57,6 +57,8 @@ struct FGrenadeStat : public FTableRowBase
 	TSubclassOf<class UCameraShakeBase> FireCameraShake; // 발사 시 화면 흔들림
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TSubclassOf<class UCameraShakeBase> ExplosionCameraShake;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	TObjectPtr<UAnimMontage> GrenadeMontage;
 	
 
 	//  클래스 정보

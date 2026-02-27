@@ -395,12 +395,6 @@ void UWeaponComponent::LaunchGrenade()
 		return;
 	}
 
-    // KH 추가 - 260223 : 클릭 시 무기 정보 UI만 수류탄으로 먼저 교체
-    if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
-    {
-        UISubSystem->BroadcastWeaponStatus(TEXT("Grenade"), CurrentGrenadeCount, Stat->MaxCharges);
-    }
-
 	// 남은 개수 체크 (0개 이하면 발사 안 함)
 	if (CurrentGrenadeCount <= 0)
 	{
@@ -420,111 +414,121 @@ void UWeaponComponent::LaunchGrenade()
 	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
 	if (!OwnerChar || !OwnerChar->GetMesh()) return;
 
-	// 소켓 위치 가져오기
+    // KH 추가 - 260223 : 클릭 시 무기 정보 UI만 수류탄으로 먼저 교체
+    if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
+    {
+        UISubSystem->BroadcastWeaponStatus(TEXT("Grenade"), CurrentGrenadeCount, Stat->MaxCharges);
+    }
+
+	if (Stat->GrenadeMontage)
+	{
+		OwnerChar->PlayAnimMontage(Stat->GrenadeMontage);
+
+		// 주의: 애니메이션 노티파이를 사용할 예정이므로 여기서 ExecuteLaunch를 호출하지 않습니다.
+		// 만약 노티파이 없이 즉시 테스트하려면 아래 줄을 주석 해제하세요.
+		// ExecuteLaunch(); 
+	}
+	else
+	{
+		// 등록된 애니메이션이 없다면 예외적으로 즉시 발사합니다.
+		ExecuteLaunch();
+	}
+}
+
+void UWeaponComponent::ExecuteLaunch()
+{
+	// 실제 물체를 소환하고 데이터를 갱신하는 핵심 로직입니다.
+	if (!GrenadeTable) return;
+	FGrenadeStat* Stat = GrenadeTable->FindRow<FGrenadeStat>(GrenadeRowName, TEXT(""));
+	if (!Stat) return;
+
+	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
+	if (!OwnerChar) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	// 1. 소환 위치 및 방향 계산
 	FName SocketName = TEXT("grenade_front");
 	FVector SpawnLocation = OwnerChar->GetMesh()->GetSocketLocation(SocketName);
 	SpawnLocation += OwnerChar->GetActorForwardVector() * 20.f;
 	FRotator SpawnRotation = OwnerChar->GetActorRotation();
 
-	UWorld* World = GetWorld();
-	if (World)
+	FActorSpawnParameters Params;
+	Params.Owner = OwnerChar;
+	Params.Instigator = OwnerChar;
+
+	// 2. 수류탄 소환
+	AActor* SpawnedActor = World->SpawnActor<AActor>(Stat->GrenadeClass, SpawnLocation, SpawnRotation, Params);
+
+	if (SpawnedActor)
 	{
-		FActorSpawnParameters Params;
-		Params.Owner = OwnerChar;
-		Params.Instigator = OwnerChar;
+		CurrentGrenadeCount--;
+		LastGrenadeTime = GetWorld()->GetTimeSeconds();
 
-		// 폭탄 스폰
-		AActor* SpawnedActor = World->SpawnActor<AActor>(Stat->GrenadeClass, SpawnLocation, SpawnRotation, Params);
-
-		if (SpawnedActor)
+		// 3. UI 및 리젠 타이머 로직
+		if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
 		{
-			CurrentGrenadeCount--;
-			LastGrenadeTime = CurrentTime;
-			AGrenadeProjectile* Projectile = Cast<AGrenadeProjectile>(SpawnedActor);
-			UE_LOG(LogTemp, Log, TEXT("수류탄 발사 남은 개수: %d / %d"), CurrentGrenadeCount, Stat->MaxCharges);
+			UISubSystem->BroadcastWeaponStatus(TEXT("Grenade"), CurrentGrenadeCount, Stat->MaxCharges);
+			UISubSystem->BroadcastSkillAttack(Stat->CooldownTime);
 
-            // KH 추가 - 260223 : 타이머 체크 블록 바깥으로 빼서 던질 때마다 방송
-            if (UDevHUISubSystem* UISubSystem = GetWorld()->GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
-            {
-                // 개수 정보 업데이트
-                UISubSystem->BroadcastWeaponStatus(TEXT("Grenade"), CurrentGrenadeCount, Stat->MaxCharges);
-                // 1초 연사 쿨다운 UI를 먼저 보여줌
-                UISubSystem->BroadcastSkillAttack(Stat->CooldownTime);
-                // 쿨다운(1초)이 끝난 시점에 남은 리젠 시간을 계산해서 UI에 다시 쏨
-                FTimerHandle RestoreHandle;
-                // 1.0f(Stat->CooldownTime) 뒤에 이 람다 함수가 실행
-                GetWorld()->GetTimerManager().SetTimer(RestoreHandle, [this, UISubSystem, Stat]()
-                    {
-                        // 아직 리젠 타이머가 돌고 있다면 (최대치가 아니라면)
-                        if (GetWorld()->GetTimerManager().IsTimerActive(GrenadeRegenTimerHandle))
-                        {
-                            // 현재 시점의 진짜 남은 리젠 시간을 가져와서 UI에 쏨
-                            float CurrentRemaining = GetWorld()->GetTimerManager().GetTimerRemaining(GrenadeRegenTimerHandle);
-                            UISubSystem->BroadcastGrenadeRegen(CurrentRemaining);
-                        }
-                    }, Stat->CooldownTime, false);
-            }
-
-			// 수류탄을 썼으니 충전 타이머 시작
-			if (!GetWorld()->GetTimerManager().IsTimerActive(GrenadeRegenTimerHandle))
-			{
-				GetWorld()->GetTimerManager().SetTimer(
-					GrenadeRegenTimerHandle,
-					this,
-					&UWeaponComponent::RegenerateGrenade,
-					Stat->RegenTime,
-					true // 반복 실행
-				);
-			}
-
-			if (Projectile)
-			{
-				UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(Projectile->GetRootComponent());
-				if (RootPrimitive)
+			FTimerHandle RestoreHandle;
+			GetWorld()->GetTimerManager().SetTimer(RestoreHandle, [this, UISubSystem, Stat]()
 				{
-					RootPrimitive->SetCollisionObjectType(ECC_PhysicsBody);
+					if (GetWorld()->GetTimerManager().IsTimerActive(GrenadeRegenTimerHandle))
+					{
+						float CurrentRemaining = GetWorld()->GetTimerManager().GetTimerRemaining(GrenadeRegenTimerHandle);
+						UISubSystem->BroadcastGrenadeRegen(CurrentRemaining);
+					}
+				}, Stat->CooldownTime, false);
+		}
 
-					// 몬스터(Pawn) 채널에 대해 'Block' 응답을 하도록 설정
-					RootPrimitive->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-				}
+		// 리젠 타이머 시작
+		if (!GetWorld()->GetTimerManager().IsTimerActive(GrenadeRegenTimerHandle))
+		{
+			GetWorld()->GetTimerManager().SetTimer(GrenadeRegenTimerHandle, this, &UWeaponComponent::RegenerateGrenade, Stat->RegenTime, true);
+		}
 
-				Projectile->MaxDamage = Stat->MaxDamage;
-				Projectile->MinDamage = Stat->MinDamage;
-				Projectile->InnerRadius = Stat->InnerRadius;
-				Projectile->ExplosionRadius = Stat->ExplosionRadius;
-				Projectile->ImpulseStrength = Stat->ImpulseStrength;
-
-				Projectile->ExplosionDecal = Stat->ExplosionDecal;
-				Projectile->FlashIntensity = Stat->FlashIntensity;
-				Projectile->FlashColor = Stat->FlashColor;
-
-				Projectile->ExplosionEffect = Stat->ExplosionEffect;
-				Projectile->ExplosionSound = Stat->ExplosionSound;
-				Projectile->ExplosionCameraShake = Stat->ExplosionCameraShake;
-
-				UProjectileMovementComponent* Movement = Projectile->FindComponentByClass<UProjectileMovementComponent>();
-				if (Movement)
-				{
-					FVector LaunchDir = GetFireDirection(SpawnLocation);
-					Movement->Velocity = LaunchDir * Stat->LaunchForce;
-				}
+		// 4. 수류탄 프로젝트일 설정 (스탯 및 콜리전)
+		AGrenadeProjectile* Projectile = Cast<AGrenadeProjectile>(SpawnedActor);
+		if (Projectile)
+		{
+			// 몬스터 콜리전 무시 방지: PhysicsBody 채널 설정 및 Pawn 차단
+			UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(Projectile->GetRootComponent());
+			if (RootPrimitive)
+			{
+				RootPrimitive->SetCollisionObjectType(ECC_PhysicsBody);
+				RootPrimitive->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 			}
 
-			if (Stat->LaunchSound)
-			{
-				UGameplayStatics::PlaySoundAtLocation(World, Stat->LaunchSound, SpawnLocation);
-			}
+			// 스탯 전달
+			Projectile->MaxDamage = Stat->MaxDamage;
+			Projectile->MinDamage = Stat->MinDamage;
+			Projectile->InnerRadius = Stat->InnerRadius;
+			Projectile->ExplosionRadius = Stat->ExplosionRadius;
+			Projectile->ImpulseStrength = Stat->ImpulseStrength;
+			Projectile->ExplosionDecal = Stat->ExplosionDecal;
+			Projectile->ExplosionEffect = Stat->ExplosionEffect;
+			Projectile->ExplosionSound = Stat->ExplosionSound;
+			Projectile->ExplosionCameraShake = Stat->ExplosionCameraShake;
 
-			if (Stat->MuzzleFlash)
+			// 발사 물리 속도 적용
+			UProjectileMovementComponent* Movement = Projectile->FindComponentByClass<UProjectileMovementComponent>();
+			if (Movement)
 			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Stat->MuzzleFlash, SpawnLocation, SpawnRotation);
+				FVector LaunchDir = GetFireDirection(SpawnLocation);
+				Movement->Velocity = LaunchDir * Stat->LaunchForce;
 			}
+		}
 
-			// 카메라 흔들림 추가
-			if (Stat->FireCameraShake)
+		// 5. 발사 피드백 (사운드 및 이펙트)
+		if (Stat->LaunchSound) UGameplayStatics::PlaySoundAtLocation(World, Stat->LaunchSound, SpawnLocation);
+		if (Stat->MuzzleFlash) UGameplayStatics::SpawnEmitterAtLocation(World, Stat->MuzzleFlash, SpawnLocation, SpawnRotation);
+		if (Stat->FireCameraShake)
+		{
+			if (APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController()))
 			{
-				APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController());
-				if (PC) PC->ClientStartCameraShake(Stat->FireCameraShake);
+				PC->ClientStartCameraShake(Stat->FireCameraShake);
 			}
 		}
 	}
@@ -574,6 +578,22 @@ bool UWeaponComponent::CanFire() const
 	// 상태 체크
 	// Idle이거나 이미 사격 중(Firing)일 때만 추가 발사 가능
 	if (CurrentState != EWeaponState::Idle && CurrentState != EWeaponState::Firing) return false;
+
+	// Grenade 몽타주 재생 여부 체크
+	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
+	if (OwnerChar && OwnerChar->GetMesh())
+	{
+		UAnimInstance* AnimInstance = OwnerChar->GetMesh()->GetAnimInstance();
+		if (AnimInstance && GrenadeTable)
+		{
+			FGrenadeStat* GStat = GrenadeTable->FindRow<FGrenadeStat>(GrenadeRowName, TEXT(""));
+			// 수류탄 몽타주가 등록되어 있고, 현재 그 몽타주가 재생 중이라면 사격 차단
+			if (GStat && GStat->GrenadeMontage && AnimInstance->Montage_IsPlaying(GStat->GrenadeMontage))
+			{
+				return false;
+			}
+		}
+	}
 
 	// 기본 스탯 및 탄약 체크
 	if (!CurrentStat || CurrentAmmo <= 0) return false;

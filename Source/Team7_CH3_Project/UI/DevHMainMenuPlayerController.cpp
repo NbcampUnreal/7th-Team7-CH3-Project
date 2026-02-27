@@ -9,12 +9,12 @@ void ADevHMainMenuPlayerController::BeginPlay()
 
     if (MainMenuWidgetClass)
     {
-        // 1. 위젯 생성
+        // 위젯 생성
         MainMenuWidgetInstance = CreateWidget<UUserWidget>(this, MainMenuWidgetClass);
 
         if (MainMenuWidgetInstance)
         {
-            MainMenuWidgetInstance->AddToViewport(); // 2. 위젯 화면에 붙임
+            MainMenuWidgetInstance->AddToViewport(); // 위젯 화면에 붙임
 
             bShowMouseCursor = true; // 마우스 커서 visible
             FInputModeGameAndUI InputMode;

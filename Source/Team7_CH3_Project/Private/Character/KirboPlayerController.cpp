@@ -5,6 +5,9 @@
 #include "Team7_CH3_Project/UI/DevHHUD.h"
 #include "Engine/EngineTypes.h" // KH 260223 추가 : 크로스헤어 구현
 #include "Math/Vector2D.h"      // KH 260223 추가 : 크로스헤어 구현
+#include "Character/KirboPlayerController.h"
+#include "Character/KirboGameMode.h"
+#include "Kismet/GameplayStatics.h"
 
 AKirboPlayerController::AKirboPlayerController()
 {
@@ -73,4 +76,31 @@ void AKirboPlayerController::SwitchToResultUIInput(UUserWidget* FocusWidget)
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 
     SetInputMode(InputMode);
+}
+
+void AKirboPlayerController::SetupInputComponent()
+{
+    Super::SetupInputComponent();
+
+    // 키 바인딩 - 키 + 키 사용
+    InputComponent->BindKey(EKeys::Equals, IE_Pressed, this, &AKirboPlayerController::VolumeUp);
+    InputComponent->BindKey(EKeys::Hyphen, IE_Pressed, this, &AKirboPlayerController::VolumeDown);
+}
+
+void AKirboPlayerController::VolumeUp()
+{
+    // 현재 게임모드를 가져와서 볼륨 0.1 증가
+    if (AKirboGameMode* GM = Cast<AKirboGameMode>(UGameplayStatics::GetGameMode(this)))
+    {
+        GM->ChangeVolume(0.1f);
+    }
+}
+
+void AKirboPlayerController::VolumeDown()
+{
+    // 현재 게임모드를 가져와서 볼륨을 0.1 감소
+    if (AKirboGameMode* GM = Cast<AKirboGameMode>(UGameplayStatics::GetGameMode(this)))
+    {
+        GM->ChangeVolume(-0.1f);
+    }
 }

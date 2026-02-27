@@ -51,6 +51,8 @@ public:
     TObjectPtr<UParticleSystem> TracerEffect = nullptr; // 탄환 궤적
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
     TSubclassOf<UCameraShakeBase> FireCameraShake;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    TObjectPtr<UAnimMontage> FireMontage;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
     TObjectPtr<USoundBase> FireSound = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")

@@ -151,6 +151,20 @@ void UWeaponComponent::Fire()
 		}
 	}
 
+	if (CurrentStat && CurrentStat->FireMontage)
+	{
+		UAnimInstance* AnimInstance = OwnerChar->GetMesh()->GetAnimInstance();
+		if (AnimInstance)
+		{
+			// 몽타주 재생 (이미 재생 중이면 리셋됨)
+			OwnerChar->PlayAnimMontage(CurrentStat->FireMontage);
+
+			// bIsNextShotLeft 값에 따라 Fire_L 또는 Fire_R 섹션으로 점프
+			FName SectionName = bIsNextShotLeft ? FName("Fire_L") : FName("Fire_R");
+			AnimInstance->Montage_JumpToSection(SectionName, CurrentStat->FireMontage);
+		}
+	}
+
 	float CurrentTime = GetWorld()->GetTimeSeconds();
 
 	// 발사 지점 및 방향 설정
@@ -187,7 +201,7 @@ void UWeaponComponent::Fire()
 		}
 	}
 
-	// 5. 데이터 업데이트 및 로그
+	// 데이터 업데이트 및 로그
 	CurrentAmmo--;
 	WeaponAmmoMap.Add(WeaponRowName, CurrentAmmo);
 	LastFireTime = CurrentTime;
@@ -195,7 +209,7 @@ void UWeaponComponent::Fire()
 
 	UE_LOG(LogTemp, Log, TEXT("남은 탄약: %d / %d"), CurrentAmmo, CurrentStat->MaxAmmo);
 
-	// 6. KH 추가 : UI 서브시스템 방송 (원문 유지)
+	// KH 추가 : UI 서브시스템 방송 (원문 유지)
 	if (UGameInstance* GI = GetWorld()->GetGameInstance())
 	{
 		if (UDevHUISubSystem* UISubSystem = GI->GetSubsystem<UDevHUISubSystem>())
@@ -205,7 +219,7 @@ void UWeaponComponent::Fire()
 		}
 	}
 
-	// 7. 탄약 소진 시 후처리
+	// 탄약 소진 시 후처리
 	if (CurrentAmmo <= 0)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);

@@ -25,4 +25,13 @@ protected:
 public:
     // 게임 종료 시 호출하여 커서와 입력을 UI로 넘기는 함수
     void SwitchToResultUIInput(class UUserWidget* FocusWidget);
+
+
+
+protected:
+    virtual void SetupInputComponent() override;
+
+    // 키 입력 시 실행될 실제 함수들
+    void VolumeUp();
+    void VolumeDown();
 };

@@ -45,6 +45,9 @@ public:
 	void LaunchGrenade(); // 블루프린트에서 마우스 우클릭을 눌렀을 때 호출 할 함수
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void ExecuteLaunch();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void ChangeWeapon(FName NewWeaponName); // 실시간 무기 교체 (데이터 테이블의 행 이름을 입력)
 
 protected:

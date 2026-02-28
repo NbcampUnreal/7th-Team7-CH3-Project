@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "DevHButton.h"
+#include "MediaPlayer.h"
+#include "FileMediaSource.h"
 #include "DevHMainMenuWidget.generated.h"
 
 UCLASS()
@@ -20,6 +22,12 @@ protected:
     // 이동할 레벨 이름 에디터에서 생성
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Config")
     FName LevelToLoad = FName("L_TopDownTest"); /*레벨 교체 시 수정*/
+
+    // 미디어
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Media")
+    UMediaPlayer* MediaPlayer;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Media")
+    UFileMediaSource* VideoSource;
 
 protected:
     virtual void NativeConstruct() override; // 초기화

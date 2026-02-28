@@ -20,7 +20,8 @@ public class Team7_CH3_Project : ModuleRules
             "EnhancedInput",
             "UMG",
             "Slate",
-            "SlateCore"
+            "SlateCore",
+            "MediaAssets"
         });
     }
 }

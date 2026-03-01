@@ -18,10 +18,19 @@ protected:
     UDevHButton* StartButton;
     UPROPERTY(meta = (BindWidget))
     UDevHButton* ExitButton;
+    UPROPERTY(meta = (BindWidget))
+    UDevHButton* DevInfoButton;
+    UPROPERTY(meta = (BindWidget))
+    class UWidget* MainMenuGroup;
     
     // 이동할 레벨 이름 에디터에서 생성
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Config")
     FName LevelToLoad = FName("L_TopDownTest"); /*레벨 교체 시 수정*/
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Config")
+    TSubclassOf<UUserWidget> DevInfoWidgetClass;
+
+    UPROPERTY()
+    UUserWidget* CachedDevInfoWidget; // 생성된 위젯 기억
 
     // 미디어
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Media")
@@ -36,4 +45,8 @@ protected:
     void OnStartGame(); // 시작 버튼 클릭한 경우
     UFUNCTION()
     void OnExitGame(); // 나가기 버튼 클릭한 경우
+    UFUNCTION()
+    void OnShowDevInfo(); // 개발자 정보 버튼 클릭한 경우
+    UFUNCTION()
+    void OnRestoreMainMenu(); // 메인메뉴 UI 다시 띄우기
 };

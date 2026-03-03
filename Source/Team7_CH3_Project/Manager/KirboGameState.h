@@ -14,31 +14,32 @@ struct FStageData;
 UCLASS()
 class TEAM7_CH3_PROJECT_API AKirboGameState : public AGameState
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 protected:
-    virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
 
 public:
-    int32 CurrentStageIndex = 0;
-    int32 CurrentWaveIndex = 0;
+	int32 CurrentStageIndex = 0;
+	int32 CurrentWaveIndex = 0;
 
-    int32 CurrentScore = 0;
-    int32 CurrentKills = 0;
+	int32 CurrentScore = 0;
+	int32 CurrentKills = 0;
 
-    void UpdateScoreAndKills(int ScoreAmount);
+	void UpdateScoreAndKills(int ScoreAmount);
 
-    UDataTable* StageDataTable;
-    AStageSpawner* LevelSpawner;
+	UDataTable* StageDataTable;
+	AStageSpawner* LevelSpawner;
 
-    UKirboGameInstance* GI;
-    UDevHUISubSystem* UISystem;
-    FStageData* CurrentStageData;
+	UKirboGameInstance* GI;
+	UDevHUISubSystem* UISystem;
+	FStageData* CurrentStageData;
 
-    void UpdateUI();
-    void StartStage();
-    void NextWave();
-    void OnWaveCleared();
-    void OnStageCleared();
-    void BroadcastLog(FName LogRowName);
+	void UpdateUI();
+	void StartStage();
+	void NextWave();
+	void OnWaveCleared();
+	void OnStageCleared();
+	void ActivateStagePortal();
+	void BroadcastLog(FName LogRowName);
 };

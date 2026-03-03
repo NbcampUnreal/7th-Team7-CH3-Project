@@ -642,29 +642,45 @@ FVector UWeaponComponent::GetFireDirection(const FVector& StartPos) const
 	APlayerController* PC = Cast<APlayerController>(Cast<ACharacter>(GetOwner())->GetController());
 	if (!PC) return GetOwner()->GetActorForwardVector();
 
-	FVector WorldLocation, WorldDirection;
-	if (PC->DeprojectMousePositionToWorld(WorldLocation, WorldDirection))
+	FHitResult CursorHit; // 커서 아래의 물리적 히트 지점
+	ETraceTypeQuery TraceChannel = UEngineTypes::ConvertToTraceType(ECC_Visibility);
+
+	// ECC_Visibility 채널을 사용하여 바닥이나 적 등 눈에 보이는 물체를 감지합니다.
+	if (PC->GetHitResultUnderCursorByChannel(TraceChannel, true, CursorHit))
 	{
-		// 기준 평면을 바닥(Z=0)으로 설정 (시체/장애물 무시)
-		float GroundZ = 0.f;
-		if (FMath::IsNearlyZero(WorldDirection.Z)) return GetOwner()->GetActorForwardVector();
+		FVector CharPos = GetOwner()->GetActorLocation();
+		FVector TargetPoint = CursorHit.ImpactPoint;
 
-		// 평면 교차 공식: t = (PlaneZ - RayOrigin.Z) / RayDirection.Z
-		float t = (GroundZ - WorldLocation.Z) / WorldDirection.Z;
+		// 캐릭터에서 타겟으로 향하는 수평 벡터 계산 (Z값 무시)
+		FVector ToTarget = TargetPoint - CharPos;
+		ToTarget.Z = 0.f;
 
-		if (t > 0)
+		// 조준 원의 반지름 설정 (이 범위 안에서는 사격 각도를 원의 경계로 고정)
+		float AimCircleRadius = 250.f;
+		float CurrentDist = ToTarget.Size();
+
+		// 만약 마우스가 원 안에 있다면, 방향만 유지한 채 길이를 반지름만큼 늘림
+		if (CurrentDist < AimCircleRadius)
 		{
-			// 마우스가 가리키는 바닥의 정확한 3D 지점
-			FVector GroundPoint = WorldLocation + (WorldDirection * t);
-
-			// 현재 총구에서 바닥 지점을 바라보는 방향 계산
-			FVector Direction = (GroundPoint - StartPos).GetSafeNormal();
-
-			// 수평 유지
-			Direction.Z = 0.f;
-
-			return Direction.GetSafeNormal();
+			// 마우스가 캐릭터와 완전히 겹쳐서 방향을 알 수 없는 경우(Size가 0에 가까울 때) 예외 처리
+			if (ToTarget.IsNearlyZero())
+			{
+				ToTarget = GetOwner()->GetActorForwardVector() * AimCircleRadius;
+			}
+			else
+			{
+				ToTarget = ToTarget.GetSafeNormal() * AimCircleRadius;
+			}
 		}
+		// 최종 타겟 지점 재설정 (캐릭터 위치 + 원 위의 벡터 + 가슴 높이 보정)
+		FVector FinalTargetPoint = CharPos + ToTarget;
+		FinalTargetPoint.Z = CharPos.Z + 100.f;
+
+		// 총구에서 이 최종 지점을 바라보는 방향 반환
+		FVector FinalDir = (FinalTargetPoint - StartPos).GetSafeNormal();
+		FinalDir.Z = 0.f;
+
+		return FinalDir.GetSafeNormal();
 	}
 	return GetOwner()->GetActorForwardVector();
 }

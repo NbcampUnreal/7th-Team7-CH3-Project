@@ -1,6 +1,8 @@
 ﻿#include "DevHWeaponSlot.h"
 #include "Team7_CH3_Project/Weapon/WeaponData.h" // 무기 데이터
 #include "Team7_CH3_Project/UI/DevHHUD.h"
+#include "Team7_CH3_Project/Manager/KirboGameInstance.h"
+
 
 void UDevHWeaponSlot::NativeConstruct()
 {
@@ -9,46 +11,47 @@ void UDevHWeaponSlot::NativeConstruct()
 
 void UDevHWeaponSlot::InitSlotData()
 {
-	if (!WeaponHandle.IsNull())
-	{
-		FWeaponStat* Data = WeaponHandle.GetRow<FWeaponStat>(TEXT("Slot Init"));
+    if (!WeaponHandle.IsNull())
+    {
+        FWeaponStat* Data = WeaponHandle.GetRow<FWeaponStat>(TEXT("Slot Init"));
+        if (Data)
+        {
+            CachedUnlockScore = Data->UnlockScore;
+            DefaultFrameColor = Data->FrameColor;
 
-		if (Data)
-		{
-			CachedUnlockScore = Data->UnlockScore;
-			DefaultFrameColor = Data->FrameColor;
+            if (Image_WeaponIcon && Data->WeaponIcon)
+                Image_WeaponIcon->SetBrushFromTexture(Data->WeaponIcon);
 
-			if (Image_WeaponIcon && Data->WeaponIcon)
-			{
-				Image_WeaponIcon->SetBrushFromTexture(Data->WeaponIcon);
-			}
+            if (Image_Frame)
+                Image_Frame->SetBrushTintColor(FSlateColor(DefaultFrameColor));
 
-			if (Image_Frame)
-			{
-				Image_Frame->SetBrushTintColor(FSlateColor(DefaultFrameColor));
-			}
-			UnlockStatus(0);
-		}
-	}
+            // [수정 포인트] GameInstance에서 현재 누적 점수를 가져옵니다.
+            UKirboGameInstance* GI = Cast<UKirboGameInstance>(GetGameInstance());
+            int32 PersistentScore = GI ? GI->GetTotalScore() : 0;
+
+            // 초기화 시점에는 bSilentUpdate를 true로 설정하여 로그 출력을 방지합니다.
+            UnlockStatus(PersistentScore, true);
+        }
+    }
 }
 
-void UDevHWeaponSlot::UnlockStatus(int32 CurrentScore)
+void UDevHWeaponSlot::UnlockStatus(int32 CurrentScore, bool bSilentUpdate)
 {
-	if (Border_Lock)
-	{
-		// 현재 점수가 해금 점수보다 높으면 해금
-		bIsUnlocked = CurrentScore >= CachedUnlockScore;
+    if (Border_Lock)
+    {
+        bool bShouldBeUnlocked = CurrentScore >= CachedUnlockScore;
 
-		if (CachedUnlockScore > 0 && bIsUnlocked && Border_Lock->GetVisibility() == ESlateVisibility::Visible)
-		{
-			if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
-			{
-				HUD->AddGameLog(FName("Weapon_Unlock"));
-			}
-		}
+        if (!bSilentUpdate && !bIsUnlocked && bShouldBeUnlocked && CachedUnlockScore > 0)
+        {
+            if (ADevHHUD* HUD = Cast<ADevHHUD>(GetWorld()->GetFirstPlayerController()->GetHUD()))
+            {
+                HUD->AddGameLog(FName("Weapon_Unlock"));
+            }
+        }
 
-		Border_Lock->SetVisibility(bIsUnlocked ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
-	}
+        bIsUnlocked = bShouldBeUnlocked;
+        Border_Lock->SetVisibility(bIsUnlocked ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+    }
 }
 
 void UDevHWeaponSlot::SetSlotActive(bool bIsActive)

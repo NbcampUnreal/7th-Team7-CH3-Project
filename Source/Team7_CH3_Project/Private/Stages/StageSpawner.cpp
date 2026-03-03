@@ -22,7 +22,7 @@ void AStageSpawner::SpawnWave(int32 WaveIndex, FEnemyWaveData WaveData)
             FVector SpawnLocation = GetRandomNavLocation();
 
             int32 Retries = 0;
-            while (IsInPlayerView(SpawnLocation) && Retries < 10)
+            while (IsInPlayerView(SpawnLocation) && Retries < 1000)
             {
                 SpawnLocation = GetRandomNavLocation();
                 Retries++;

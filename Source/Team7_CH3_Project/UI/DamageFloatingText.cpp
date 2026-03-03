@@ -16,6 +16,12 @@ void ADamageFloatingText::BeginPlay()
 {
 	Super::BeginPlay();
 
+    // 겹침 방지
+    float RandomX = FMath::RandRange(-50.0f, 50.0f);
+    float RandomY = FMath::RandRange(-50.0f, 50.0f);
+    float RandomZ = FMath::RandRange(-20.0f, 20.0f);
+    FVector NewLocation = GetActorLocation() + FVector(RandomX, RandomY, RandomZ);
+    SetActorLocation(NewLocation);
     // 지정된 시간이 지나면 자동으로 월드에서 제거되도록 설정
     SetLifeSpan(LifeSpan);
 }

@@ -15,9 +15,20 @@ class TEAM7_CH3_PROJECT_API UKirboGameInstance : public UGameInstance
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LevelData")
 	UDataTable* StageDataTable;
- 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-    TSubclassOf<UUserWidget> ResultWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* MainMenuMusicAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* InGameMusicAsset;
+	UPROPERTY()
+	class UAudioComponent* BGMComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> ResultWidgetClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> VolumeWidgetClass;
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	class UUserWidget* VolumeWidgetInstance;
 
 	int32 CurrentStageIndex = 0;
 	int32 TotalScore = 0;
@@ -30,8 +41,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GameFlow")
 	void GameClear();
-    UFUNCTION(BlueprintCallable, Category = "GameFlow")
-    void GameOver();
+	UFUNCTION(BlueprintCallable, Category = "GameFlow")
+	void GameOver();
 
 	UFUNCTION(BlueprintCallable, Category = "GameFlow")
 	void AddScore(int32 AddedScores);
@@ -42,6 +53,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GameFlow")
 	void SetKills(int32 SetKills);
 
-    UFUNCTION(BlueprintCallable)
-    int32 GetTotalScore() const { return TotalScore; }
+	UFUNCTION(BlueprintCallable)
+	int32 GetTotalScore() const { return TotalScore; }
+
+	UFUNCTION(BlueprintCallable, Category = "Audio")
+	void PlayBackgroundMusic(USoundBase* NewMusic, UWorld* InWorld);
+	UFUNCTION(BlueprintCallable, Category = "Audio")
+	void ChangeVolume(float Delta);
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnVolumeChangedUI(float NewVolume);
+	UFUNCTION(BlueprintCallable, Category = "System")
+	void InitializeBGMAndUI(UWorld* InWorld);
+
+private:
+	float CurrentVolume = 1.0f;
 };

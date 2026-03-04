@@ -7,6 +7,7 @@
 #include "InputActionValue.h"
 #include "KirboCharacter.generated.h"
 
+class UKirboActionComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UKirboStatComponent;
@@ -44,9 +45,6 @@ protected:
 	UInputAction* SprintAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DashAction;
-	FTimerHandle DashTimerHandle;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float DashCooldownTime = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	UAnimMontage* DeathMontage;
@@ -54,11 +52,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsDead = false;
 
-	FTimerHandle InvincibilityTimerHandle;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action")
+	UKirboActionComponent* ActionComp;
 
-	bool bIsInvincible = false; // 무적 상태 확인
-	bool bCanDash = true;
-	bool bIsShooting = false;
 	bool bIsControlEnabled = false;
 
 	virtual void BeginPlay() override;
@@ -69,26 +65,21 @@ protected:
 
 	void Move(const FInputActionValue& Value);
 
-	void StartShot();
-	void StopShot();
-
-	void StartSprint();
-	void StopSprint();
-
-	void Dash();
-	void ResetDash();
-
-	void ResetInvincibility();
 	void HandleDeath();
-
 
 public:
 	UPROPERTY()
 	UMaterialInstanceDynamic* StaminaMaterialDynamic;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UStaticMeshComponent* StaminaPlaneComp;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class ADamageFloatingText> DamageTextClass;
 
 	void UpdateStamina(float CurrentStamina, float MaxStamina);
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 	void TestSelfDamage(); // KH 260224 추가 : 플로팅 텍스트 테스트용 함수 선언
+	UFUNCTION()
+	void SpawnDamageText(float DamageAmount);
+	UFUNCTION()
+	void OnStaminaChangedCallback(float CurrentStamina, float MaxStamina);
 };

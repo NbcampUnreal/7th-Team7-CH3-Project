@@ -2,6 +2,7 @@
 
 
 #include "Character/KirboCharacter.h"
+#include "Character/KirboActionComponent.h"
 #include "Character/KirboStatComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -41,6 +42,8 @@ AKirboCharacter::AKirboCharacter()
 	StaminaPlaneComp->SetUsingAbsoluteRotation(true);
 	StaminaPlaneComp->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
 	StaminaPlaneComp->SetRelativeScale3D(FVector(5.0f, 5.0f, 5.0f));
+
+	ActionComp = CreateDefaultSubobject<UKirboActionComponent>(TEXT("ActionComp"));
 }
 
 void AKirboCharacter::BeginPlay()
@@ -79,10 +82,18 @@ void AKirboCharacter::BeginPlay()
 		if (StatComp && StatData)
 		{
 			StatComp->InitializeStats(*StatData);
+
+			StatComp->OnStaminaChanged.AddDynamic(this, &AKirboCharacter::OnStaminaChangedCallback);
+			StatComp->OnDamageReceived.AddDynamic(this, &AKirboCharacter::SpawnDamageText);
 		}
 		else
 		{
 			UE_LOG(LogTemp, Error, TEXT("StatComp or StatData is NULL at BeginPlay!"));
+		}
+
+		if (ActionComp && StatComp)
+		{
+			ActionComp->Initialize(this, StatComp);
 		}
 	}
 }
@@ -100,34 +111,10 @@ void AKirboCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	float SprintSpeed = StatComp->GetSprintSpeed();
-
-	if (GetCharacterMovement()->MaxWalkSpeed >= SprintSpeed - 1.0f)
-	{
-		float Cost = StatComp->BaseStat.SprintStaminaCost * DeltaTime;
-		if (!StatComp->UseStamina(Cost))
-		{
-			StopSprint();
-		}
-	}
-	else
-	{
-		if (StatComp)
-		{
-			float RecoveryRate = StatComp->GetStaminaRecoveryRate();
-			StatComp->RecoverStamina(RecoveryRate * DeltaTime);
-		}
-	}
-
 	if (StaminaPlaneComp)
 	{
 		FVector CharLoc = GetActorLocation();
 		StaminaPlaneComp->SetWorldLocation(FVector(CharLoc.X, CharLoc.Y, CharLoc.Z - 80.0f)); // 높이 미세 조정
-	}
-
-	if (StatComp)
-	{
-		UpdateStamina(StatComp->CurrentStamina, StatComp->BaseStat.MaxStamina);
 	}
 
 	if (bIsControlEnabled)
@@ -160,32 +147,32 @@ void AKirboCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		EnhancedInputComponent->BindAction(
 			ShotAction,
 			ETriggerEvent::Started,
-			this,
-			&AKirboCharacter::StartShot
+			ActionComp,
+			&UKirboActionComponent::StartShot
 		);
 		EnhancedInputComponent->BindAction(
 			ShotAction,
 			ETriggerEvent::Completed,
-			this,
-			&AKirboCharacter::StopShot
+			ActionComp,
+			&UKirboActionComponent::StopShot
 		);
 		EnhancedInputComponent->BindAction(
 			SprintAction,
 			ETriggerEvent::Started,
-			this,
-			&AKirboCharacter::StartSprint
+			ActionComp,
+			&UKirboActionComponent::StartSprint
 		);
 		EnhancedInputComponent->BindAction(
 			SprintAction,
 			ETriggerEvent::Completed,
-			this,
-			&AKirboCharacter::StopSprint
+			ActionComp,
+			&UKirboActionComponent::StopSprint
 		);
 		EnhancedInputComponent->BindAction(
 			DashAction,
 			ETriggerEvent::Started,
-			this,
-			&AKirboCharacter::Dash
+			ActionComp,
+			&UKirboActionComponent::Dash
 		);
 	}
 }
@@ -209,60 +196,6 @@ void AKirboCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(FVector::ForwardVector, MovementVector.X * SpeedMultiplier);
 		AddMovementInput(FVector::RightVector, MovementVector.Y * SpeedMultiplier);
 	}
-}
-
-void AKirboCharacter::StartShot()
-{
-	bIsShooting = true;
-	GetCharacterMovement()->bOrientRotationToMovement = false;
-}
-
-void AKirboCharacter::StopShot()
-{
-	bIsShooting = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-}
-
-void AKirboCharacter::StartSprint()
-{
-	if (StatComp->CurrentStamina > 0)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = StatComp->GetSprintSpeed();
-	}
-}
-
-void AKirboCharacter::StopSprint()
-{
-	GetCharacterMovement()->MaxWalkSpeed = StatComp->GetMoveSpeed();
-}
-
-void AKirboCharacter::Dash()
-{
-	if (!StatComp) return;
-	float DashCost = StatComp->GetDashStaminaCost();
-
-	if (!bCanDash || (StatComp && StatComp->CurrentStamina < DashCost)) return;
-
-	bIsInvincible = true;
-
-	FVector DashDir = GetVelocity().IsNearlyZero() ? GetActorForwardVector() : GetVelocity().GetSafeNormal();
-	LaunchCharacter(DashDir * 3000.f, true, true);
-
-	StatComp->UseStamina(DashCost);
-
-	bCanDash = false;
-	GetWorldTimerManager().SetTimer(DashTimerHandle, this, &AKirboCharacter::ResetDash, 0.5f, false);
-}
-
-void AKirboCharacter::ResetDash()
-{
-	bCanDash = true;
-	bIsInvincible = false;
-}
-
-void AKirboCharacter::ResetInvincibility()
-{
-	bIsInvincible = false;
 }
 
 void AKirboCharacter::HandleDeath()
@@ -309,7 +242,7 @@ float AKirboCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (bIsDead || bIsInvincible || ActualDamage <= 0.f || !StatComp)
+	if (bIsDead || !ActionComp || ActualDamage <= 0.f || !StatComp)
 	{
 		return 0.f;
 	}
@@ -318,9 +251,7 @@ float AKirboCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 	if (StatComp->CurrentHP > 0.f)
 	{
-		bIsInvincible = true;
-		// KH 260224 추가 : 여기서 받는 데미지 딜레이 속도 조절 가능
-		GetWorldTimerManager().SetTimer(InvincibilityTimerHandle, this, &AKirboCharacter::ResetInvincibility, 0.3f, false);
+		ActionComp->TriggerInvincibility(0.3f);
 	}
 	else
 	{
@@ -328,4 +259,24 @@ float AKirboCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	}
 
 	return ActualDamage;
+}
+
+void AKirboCharacter::OnStaminaChangedCallback(float CurrentStamina, float MaxStamina)
+{
+	UpdateStamina(CurrentStamina, MaxStamina);
+}
+
+void AKirboCharacter::SpawnDamageText(float DamageAmount)
+{
+	if (DamageTextClass)
+	{
+		FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
+		ADamageFloatingText* DamageTextActor = GetWorld()->SpawnActor<ADamageFloatingText>(
+			DamageTextClass, SpawnLocation, FRotator::ZeroRotator);
+
+		if (DamageTextActor)
+		{
+			DamageTextActor->SetDamageValue(DamageAmount);
+		}
+	}
 }

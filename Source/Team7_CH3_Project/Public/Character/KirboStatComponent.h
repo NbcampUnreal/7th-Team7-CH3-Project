@@ -7,8 +7,8 @@
 #include "KirboStatRow.h"
 #include "KirboStatComponent.generated.h"
 
-//UI 갱신용 델리게이트? 공부 더 해야됨
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatChanged, float, CurrentValue, float, MaxValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDamageReceived, float, DamageAmount);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class TEAM7_CH3_PROJECT_API UKirboStatComponent : public UActorComponent
@@ -36,6 +36,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnStatChanged OnStaminaChanged;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnDamageReceived OnDamageReceived;
+
 	void InitializeStats(const FKirboStatRow& InStatData);
 
 	void TakeDamage(float Amount);
@@ -49,9 +52,4 @@ public:
 	float GetAttackDamageMultiplier() const { return BaseStat.AttackDamageMultiplier; }
 	float GetDashStaminaCost() const { return BaseStat.DashStaminaCost; }
 	float GetStaminaRecoveryRate() const { return BaseStat.StaminaRecoveryRate; }
-
-public:
-    // KH 260224 추가 : 데미지 텍스트 블루프린트를 할당할 변수
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-    TSubclassOf<class ADamageFloatingText> DamageTextClass;
 };

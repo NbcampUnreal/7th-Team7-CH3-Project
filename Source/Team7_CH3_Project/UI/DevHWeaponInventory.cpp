@@ -15,9 +15,9 @@ void UDevHWeaponInventory::NativeConstruct()
 
     if (UDevHUISubSystem* UISub = GetGameInstance()->GetSubsystem<UDevHUISubSystem>())
     {
-        // 1. 점수 정보 들어오면 슬롯 해금 여부 판단
+        // 점수 정보 들어오면 슬롯 해금 여부 판단
         UISub->OnHUDDataChanged.AddDynamic(this, &UDevHWeaponInventory::HandleScoreUpdate);
-        // 2. 무기 선택 정보 
+        // 무기 선택 정보 
         UISub->OnWeaponSelectionChanged.AddDynamic(this, &UDevHWeaponInventory::SelectWeaponSlot);
     }
 

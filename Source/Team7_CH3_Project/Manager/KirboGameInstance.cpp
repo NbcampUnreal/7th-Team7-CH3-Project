@@ -62,3 +62,12 @@ void UKirboGameInstance::AddKills(int32 AddedKills)
 {
     TotalKills += AddedKills;
 }
+
+void UKirboGameInstance::SetScore(int32 SetScores)
+{
+    TotalScore = SetScores;
+}
+void UKirboGameInstance::SetKills(int32 SetKills)
+{
+    TotalKills = SetKills;
+}

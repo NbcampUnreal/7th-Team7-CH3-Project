@@ -25,11 +25,11 @@ void UDevHWeaponSlot::InitSlotData()
             if (Image_Frame)
                 Image_Frame->SetBrushTintColor(FSlateColor(DefaultFrameColor));
 
-            // GameInstance에서 현재 누적 점수를 가져옴
+            // [수정 포인트] GameInstance에서 현재 누적 점수를 가져옵니다.
             UKirboGameInstance* GI = Cast<UKirboGameInstance>(GetGameInstance());
             int32 PersistentScore = GI ? GI->GetTotalScore() : 0;
 
-            // 초기화 시점에는 bSilentUpdate를 true로 설정하여 로그 출력을 방지
+            // 초기화 시점에는 bSilentUpdate를 true로 설정하여 로그 출력을 방지합니다.
             UnlockStatus(PersistentScore, true);
         }
     }

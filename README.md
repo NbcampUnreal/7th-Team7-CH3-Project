@@ -100,6 +100,4 @@ T-DAS는 점진적으로 난이도가 상승하는 웨이브 시스템 속에서
 - **Modules**: NavigationSystem, AIModule, Niagara, EnhancedInput, MediaAssets
 
 ---
-<div align="center">
-  <b>Developer: Dotori</b>
 </div>

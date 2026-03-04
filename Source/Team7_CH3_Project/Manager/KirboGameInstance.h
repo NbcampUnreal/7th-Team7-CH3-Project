@@ -37,6 +37,10 @@ public:
 	void AddScore(int32 AddedScores);
 	UFUNCTION(BlueprintCallable, Category = "GameFlow")
 	void AddKills(int32 AddedKills);
+	UFUNCTION(BlueprintCallable, Category = "GameFlow")
+	void SetScore(int32 SetScores);
+	UFUNCTION(BlueprintCallable, Category = "GameFlow")
+	void SetKills(int32 SetKills);
 
     UFUNCTION(BlueprintCallable)
     int32 GetTotalScore() const { return TotalScore; }

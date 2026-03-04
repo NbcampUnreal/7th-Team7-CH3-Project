@@ -142,8 +142,8 @@ void AKirboGameState::OnStageCleared()
 {
 	if (GI)
 	{
-		GI->AddScore(CurrentScore);
-		GI->AddKills(CurrentKills);
+		GI->SetScore(CurrentScore);
+		GI->SetKills(CurrentKills);
 
 		if (CurrentStageIndex == 0)
 		{

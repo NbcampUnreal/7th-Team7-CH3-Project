@@ -42,4 +42,7 @@ public:
 	void OnStageCleared();
 	void ActivateStagePortal();
 	void BroadcastLog(FName LogRowName);
+
+	UFUNCTION(BlueprintCallable, Category = "Stage")
+	void EnterStagePortal();
 };

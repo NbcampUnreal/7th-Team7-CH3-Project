@@ -145,21 +145,16 @@ void AKirboGameState::OnStageCleared()
 		GI->SetScore(CurrentScore);
 		GI->SetKills(CurrentKills);
 
-		if (CurrentStageIndex == 0)
-		{
-			ActivateStagePortal();
-			return;
-		}
-
 		TArray<FStageData*> AllRows;
 		StageDataTable->GetAllRows<FStageData>(TEXT("ContextString"), AllRows);
+
 		if (AllRows.Num() <= CurrentStageIndex + 1)
 		{
 			GI->GameClear();
 		}
 		else
 		{
-			GI->MoveToNextStage(AllRows[CurrentStageIndex + 1]->LevelName);
+			ActivateStagePortal();
 		}
 	}
 
@@ -178,8 +173,22 @@ void AKirboGameState::ActivateStagePortal()
 			Portal->OpenDoor();
 		}
 	}
-
 }
+
+void AKirboGameState::EnterStagePortal()
+{
+	if (GI)
+	{
+		TArray<FStageData*> AllRows;
+		StageDataTable->GetAllRows<FStageData>(TEXT("ContextString"), AllRows);
+
+		if (AllRows.Num() > CurrentStageIndex + 1)
+		{
+			GI->MoveToNextStage(AllRows[CurrentStageIndex + 1]->LevelName);
+		}
+	}
+}
+
 void AKirboGameState::BroadcastLog(FName LogRowName)
 {
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -190,3 +199,5 @@ void AKirboGameState::BroadcastLog(FName LogRowName)
 		}
 	}
 }
+
+

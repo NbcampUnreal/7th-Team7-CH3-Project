@@ -1,0 +1,132 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Engine/DataTable.h"
+#include "Enemy/ICombatEntity.h"
+#include "Enemy/EnemyProjectile.h"
+#include "Particles/ParticleSystem.h"
+#include "EnemyData.generated.h"
+
+USTRUCT(BlueprintType)
+struct FEnemyRangeObjectData
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    TSubclassOf<AEnemyProjectile> ProjectileObj;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* MuzzleEffect;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float MuzzleEffectSize;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* HitEffectGround;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float HitEffectGroundSize;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UParticleSystem* HitEffectPlayer;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    float HitEffectPlayerSize;
+};
+
+USTRUCT(BlueprintType)
+struct FEnemyData : public FTableRowBase
+{
+    GENERATED_BODY()
+
+public:
+    FEnemyData() :
+        HealthMax(100.0f),
+        Defence(5.0f),
+        Damage(10.0f),
+        Movespeed(300.0f),
+        AttackRange(150.0f),
+        AttackCooldown(2.0f),
+        ZDifferenceAllowed(50.0f),
+        RangeProjectileSpeed(1500.0f),
+        RangeProjectileGravity(0.0f),
+        RangeProjectileAOE(0.0f),
+        GoldRaward(20),
+        ScoreRaward(20),
+        WaveHealthInc(0.05f),
+        StageHealthInc(0.2f),
+        WaveDamageInc(0.03f),
+        StageDamageInc(0.15f),
+        WaveRewardInc(0.25f),
+        StageRewardInc(1.0f),
+        AttackSoundMultiplier(1.0f),
+        ImpactSoundMultiplier(1.0f),
+        DeadSoundMultiplier(1.0f)
+    {
+    }
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float HealthMax;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float Defence;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float Damage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+    float Movespeed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    EAttackType AttackType;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float AttackRange;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float AttackCooldown;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float ZDifferenceAllowed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Melee")
+    float MeleeAttackAngle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Ranged")
+    float RangeProjectileSpeed;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Ranged")
+    float RangeProjectileGravity;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Ranged")
+    float RangeProjectileAOE;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+    float GoldRaward;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+    float ScoreRaward;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float WaveHealthInc;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float StageHealthInc;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float WaveDamageInc;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float StageDamageInc;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float WaveRewardInc;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scaling")
+    float StageRewardInc;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectData")
+    FEnemyRangeObjectData ProjectileData;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    USoundBase* AttackSound;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    float AttackSoundMultiplier;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    USoundBase* ImpactSound;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    float ImpactSoundMultiplier;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    TArray<USoundBase*> DeadSound;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SoundData")
+    float DeadSoundMultiplier;
+};

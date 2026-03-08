@@ -5,13 +5,12 @@
   <img src="https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdna%2Fbn8DCO%2FdJMcadOCPh2%2FAAAAAAAAAAAAAAAAAAAAAItXAiogKo1g1mwgiELQpFcss4O910v8tkGEH5z-VVGh%2Fimg.png%3Fcredential%3DyqXZFxpELC7KVnFOS48ylbz2pIh7yKj8%26expires%3D1774969199%26allow_ip%3D%26allow_referer%3D%26signature%3DY24TI8%252FAhVHmxcl%252BWv8CRSB2%252BnE%253D" width="100%" alt="T-DAS Main Banner">
 
   <br>
-
-  ![Unreal Engine 5](https://img.shields.io/badge/Unreal%20Engine-5.5.4-gray?style=flat-square&logo=unrealengine&logoColor=black)
+  <br>
+  
+  ![Unreal Engine 5](https://img.shields.io/badge/Unreal%20Engine-5.5.4-white?style=flat-square&logo=unrealengine&logoColor=black)
   ![C++](https://img.shields.io/badge/C++-17-00599C?style=flat-square&logo=c%2B%2B&logoColor=white)
   ![Platform](https://img.shields.io/badge/Platform-PC-EF9421?style=flat-square)
   ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-
-  <br>
 
   [🎥**시연 영상**](https://www.youtube.com/watch?v=ysVfI3eZeFc) | 
   [📄**최종 기획서**](https://www.notion.so/T-DAS-318711d71de1805e9cdcf1b62a7ee629) | 

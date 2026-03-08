@@ -6,7 +6,7 @@
 
   <br>
 
-  ![Unreal Engine 5](https://img.shields.io/badge/Unreal%20Engine-5.5.4-white?style=flat-square&logo=unrealengine&logoColor=black)
+  ![Unreal Engine 5](https://img.shields.io/badge/Unreal%20Engine-5.5.4-gray?style=flat-square&logo=unrealengine&logoColor=black)
   ![C++](https://img.shields.io/badge/C++-17-00599C?style=flat-square&logo=c%2B%2B&logoColor=white)
   ![Platform](https://img.shields.io/badge/Platform-PC-EF9421?style=flat-square)
   ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)

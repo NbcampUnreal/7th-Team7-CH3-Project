@@ -13,7 +13,7 @@
   ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
   [🎥**시연 영상**](https://www.youtube.com/watch?v=ysVfI3eZeFc) | 
-  [📄**최종 기획서**](https://www.notion.so/T-DAS-318711d71de1805e9cdcf1b62a7ee629) | 
+  [📄**최종 기획서**](https://www.notion.so/teamsparta/T-DAS-31f2dc3ef51480aca91cd73ddb47f267) | 
   [📊**발표 자료**](https://www.canva.com/design/DAHC9vTyW_A/Xb2PWGMd33L6fJ2DeabAsA/edit) | 
   [📦**게임 패키징**](https://drive.google.com/file/d/1VdlQZ1GdJNZyTtV87XEx1aHyIOUaY_5M/view) |
   [💻**저장소**](https://github.com/NbcampUnreal/7th-Team7-CH3-Project)
